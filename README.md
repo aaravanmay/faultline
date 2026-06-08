@@ -4,7 +4,6 @@
 
 It does this **six ways**, all with the **same deterministic detector** — no LLM-judge, so it gates CI without flaking.
 
-![CI](https://github.com/aaravanmay/faultline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
