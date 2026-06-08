@@ -1,0 +1,40 @@
+name: "faultline"
+description: "Chaos-test your AI agent on every PR — fail the build when a tool fault makes it silently do the wrong thing."
+branding:
+  icon: "alert-triangle"
+  color: "red"
+inputs:
+  suite:
+    description: "Path to a Python file that defines faultline_suite()."
+    required: false
+    default: "faultline_suite.py"
+  python-version:
+    description: "Python version to run on."
+    required: false
+    default: "3.11"
+  faultline-url:
+    description: "Your faultline project URL (Supabase). Set to push results to the hosted dashboard."
+    required: false
+    default: ""
+  faultline-key:
+    description: "Your project's public anon key (safe in CI)."
+    required: false
+    default: ""
+  faultline-token:
+    description: "Your project token — store it in repo secrets, e.g. ${{ secrets.FAULTLINE_TOKEN }}."
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - shell: bash
+      run: pip install faultline
+    - shell: bash
+      run: faultline run "${{ inputs.suite }}"
+      env:
+        FAULTLINE_URL: ${{ inputs.faultline-url }}
+        FAULTLINE_KEY: ${{ inputs.faultline-key }}
+        FAULTLINE_TOKEN: ${{ inputs.faultline-token }}

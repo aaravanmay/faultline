@@ -1,0 +1,17 @@
+.venv311/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+.pytest_cache/
+*.key
+.env
+tripwire-report.md
+bench/data/
+faultline-report.md
+junk/
+.claude/skills/
+.claude/settings.local.json

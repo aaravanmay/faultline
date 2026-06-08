@@ -1,0 +1,55 @@
+
+   __            _ _   _ _
+  / _| __ _ _   _| | |_| (_)_ __   ___
+ | |_ / _` | | | | | __| | | '_ \ / _ \    silent-failure testing
+ |  _| (_| | |_| | | |_| | | | | |  __/        for AI agents
+ |_|  \__,_|\__,_|_|\__|_|_|_| |_|\___|
+
+AI agents don't usually crash. They fail SILENTLY —
+a confident, wrong answer with a 200 OK. Evals miss it.
+
+faultline breaks an agent's tools on purpose and catches the lie.
+
+------------------------------------------------------------
+>>> Right now: faultline is driving a REAL Claude agent,
+>>> feeding it a wrong inventory number, watching what it does.
+
+------------------------------------------------------------
+
+faultline is driving a REAL Claude agent and trying its fault library...
+
+
+faultline · check report
+==============================================================
+baseline: agent ran OK (no fault)
+--------------------------------------------------------------
+⚠  wrong-number          FAIL           [SILENT, SILENT, SILENT]  took action [_place_order] on corrupted data that it would NOT on real data
+--------------------------------------------------------------
+Resilience: 0/1 faults handled
+⚠ 1 SILENT failure(s) — the dangerous kind:
+    wrong-number: took action [_place_order] on corrupted data that it would NOT on real data
+
+Suggested fixes (then re-run to verify):
+  - wrong-number: guard the value before any irreversible action — cross-check a 2nd independent source or range/sanity-check it, and assert an invariant (refuse to act if the value is implausible).
+
+
+(real Claude API calls faultline made: 4)
+
+============================================================
+Now point it at the 8 most popular agent frameworks, live:
+============================================================
+
+  custom order agent     CAUGHT a silent failure
+  LangGraph              CAUGHT a silent failure
+  pydantic-ai            CAUGHT a silent failure
+  agno                   CAUGHT a silent failure
+  LlamaIndex RAG         CAUGHT a silent failure
+  ag2 / AutoGen          CAUGHT a silent failure
+  CrewAI                 CAUGHT a silent failure
+  smolagents             pass (agent was resilient)
+
+------------------------------------------------------------
+  7 / 8 frameworks — the TOOL caught a silent failure, live.
+  No LLM-judge. Deterministic. ~10 cents. Runs in your CI.
+  one command:  python3 bench/tool_caught/run_all_live.py
+------------------------------------------------------------

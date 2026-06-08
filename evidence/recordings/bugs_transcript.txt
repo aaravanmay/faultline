@@ -1,0 +1,23 @@
+faultline · real bugs in famous AI projects
+============================================================
+Each catch runs against the REAL installed library. No faking.
+
+chonkie  (4.1k stars)   — faultline fuzz
+   CAUGHT: chunk_overlap=1.5 -> 0 chunks for a 100-char doc (whole document silently dropped)
+   -> PR #604
+
+LangChain  (139k stars)   — faultline probe
+   CAUGHT: an unterminated code fence silently deletes the code block AND every section after it
+   -> PR #37964
+
+pandas-ai  (24k stars)   — faultline probe
+   CAUGHT: NaN from an empty aggregation passes the numeric check -> returned as a real answer
+   -> PR #1894
+
+Arize openinference  (1k stars)   — faultline probe
+   CAUGHT: a 500-token COUNT lands in the llm.cost.* (USD) attribute -> cost panel reads $500
+   -> PR #3227
+
+------------------------------------------------------------
+4 / 4 real bugs in famous AI projects — caught live, 4 PRs open.
+chonkie · LangChain · pandas-ai · Arize openinference

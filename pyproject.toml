@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "faultline"
+version = "0.3.0"
+description = "Multi-mode silent-failure testing for AI agents — break their tools, fuzz their inputs, replay their traces, mine their rules, and catch the 200-OK-but-wrong your evals miss."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Aarav Goenka" }]
+keywords = ["ai", "agents", "llm", "chaos-engineering", "testing", "reliability", "tool-use", "fuzzing", "regression-testing", "invariant-mining"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []   # the core engine is pure standard library
+
+[project.optional-dependencies]
+# only needed to run the live LLM example agents, not the engine itself
+anthropic = ["anthropic>=0.40"]
+langchain = ["langchain>=0.3", "langchain-anthropic>=0.3"]
+smolagents = ["smolagents>=1.0", "litellm>=1.0"]
+dev = ["pillow"]   # for rendering the evidence screenshots
+
+[project.scripts]
+faultline = "faultline.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/aaravanmay/faultline"
+Issues = "https://github.com/aaravanmay/faultline/issues"
+
+[tool.setuptools.packages.find]
+include = ["faultline*"]

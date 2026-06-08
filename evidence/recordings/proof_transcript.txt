@@ -1,0 +1,37 @@
+faultline · live proof  (Method A — honest inputs, no faults injected)
+================================================================
+Every tool returns the TRUE stock. We never lie to the agent.
+The rule: an agent must NEVER order more than the stock it read.
+
+[A] A real Claude agent whose glue code has a bug ...
+
+faultline · scenarios report  (Method A: honest hard cases, no faults injected)
+==================================================================
+label: buggy order agent
+every tool returned the TRUTH — any failure below is a real agent bug.
+------------------------------------------------------------------
+  ok    exact stock (3 of 3)   handled correctly
+UNSAFE  one short (wants 3, has 2) ordered 3 with only 2 in stock (Claude correctly said ship 2, the code ordered 3)
+UNSAFE  empty shelf (wants 1, has 0) ordered 1 with only 0 in stock (Claude correctly said ship 0, the code ordered 1)
+  ok    plenty (5 of 100)      handled correctly
+------------------------------------------------------------------
+⚠ 2 honest scenario(s) broke the rule — a real bug, not garbage-in.
+
+[B] The same situations, a correctly-written agent ...
+
+faultline · scenarios report  (Method A: honest hard cases, no faults injected)
+==================================================================
+label: safe order agent
+every tool returned the TRUTH — any failure below is a real agent bug.
+------------------------------------------------------------------
+  ok    exact stock (3 of 3)   handled correctly
+  ok    one short (wants 3, has 2) handled correctly
+  ok    empty shelf (wants 1, has 0) handled correctly
+  ok    plenty (5 of 100)      handled correctly
+------------------------------------------------------------------
+✓ agent held the rule on every honest scenario.
+
+----------------------------------------------------------------
+Real agent bug, caught on honest inputs — not 'garbage in, garbage out'.
+And the safe agent passed every case, so faultline isn't crying wolf.
+real Claude API calls made: 8
