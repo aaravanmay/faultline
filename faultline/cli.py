@@ -2,6 +2,8 @@
 
     faultline demo                 run the built-in offline demo (no API key)
     faultline run <file.py>        chaos-test the suite in <file.py>  (alias: check)
+    faultline attest <file.py>     run + write a tamper-evident faultline.report.json
+    faultline verify <report.json> re-derive the hash, confirm the report is untampered
     faultline probe <file.py>      run honest edge cases    -> needs faultline_probe()
     faultline fuzz <file.py>       auto-generate edge inputs -> needs faultline_fuzz()
     faultline scenarios <file.py>  honest hard situations    -> needs faultline_scenarios()
@@ -67,6 +69,68 @@ def _run_suite(suite, _push=False) -> int:
         return 1
     print("\nfaultline: all faults handled -> exit 0")
     return 0
+
+
+def _run_attest(suite, out_path) -> int:
+    """Run the suite (same gate semantics as run) AND write a tamper-evident
+    faultline.report.json. Exit code follows the gate (non-zero on FAIL/CRASH),
+    so `attest` still gates CI -- it is `run` plus a signed evidence file.
+    """
+    from . import attest as _attest
+
+    agent = suite["agent"]
+    task = suite.get("task")
+    faults = suite["faults"]
+    invariants = suite.get("invariants")
+    trials = suite.get("trials", 5)
+    import time as _time
+    _t0 = _time.perf_counter()
+    result = check(agent, task, faults, invariants=invariants, trials=trials)
+    duration_ms = int((_time.perf_counter() - _t0) * 1000)
+    result.report()
+
+    agent_name = suite.get("name") or getattr(agent, "__name__", "agent")
+    report = _attest.build_report(result, agent=agent_name,
+                                  duration_ms=duration_ms, trials=trials)
+    _attest.write_report(report, out_path)
+    chash = report["attestation"]["content_hash"]
+    n = len(report["body"].get("results", []))
+    print("\nfaultline: wrote %s" % out_path)
+    print("faultline: attested %d verdict(s) -- sha256 %s (tamper-evident, not a secret-key signature)"
+          % (n, chash))
+
+    bad = [r for r in result.rows if r["verdict"] in ("FAIL", "CRASH")]
+    _ci_emit("attest", len(bad), len(result.rows), extra="content-hash `%s`" % chash)
+    if bad:
+        print("\nfaultline: %d fault(s) not handled -> exit 1 (report still written)" % len(bad))
+        return 1
+    print("\nfaultline: all faults handled -> exit 0")
+    return 0
+
+
+def _run_verify(report_path) -> int:
+    """Load a faultline.report.json, recompute its content hash, and confirm it
+    matches. Any edit (a flipped verdict, an altered number) changes the hash ->
+    exit non-zero and name the mismatch. Clean report -> exit 0.
+    """
+    from . import attest as _attest
+
+    if not os.path.exists(report_path):
+        print("faultline: no such file: %s" % report_path, file=sys.stderr)
+        return 2
+    try:
+        report = _attest.load_report(report_path)
+    except Exception as exc:
+        print("faultline: could not read %s as a report -- %s: %s"
+              % (report_path, type(exc).__name__, exc), file=sys.stderr)
+        return 2
+
+    ok, msg = _attest.verify_report(report)
+    if ok:
+        print("faultline: %s" % msg)
+        return 0
+    print("faultline: VERIFY FAILED -- %s" % msg, file=sys.stderr)
+    return 1
 
 
 def _load_suite(path):
@@ -229,6 +293,42 @@ def main(argv=None):
         if suite is None:
             return 2
         return _run_suite(suite, _push=_push)
+
+    if cmd == "attest":
+        args = argv[1:]
+        out_path = "faultline.report.json"
+        positional = []
+        i = 0
+        while i < len(args):
+            a = args[i]
+            if a in ("--out", "-o"):
+                if i + 1 >= len(args):
+                    print("faultline: --out needs a path", file=sys.stderr)
+                    return 2
+                out_path = args[i + 1]
+                i += 2
+                continue
+            if a.startswith("--out="):
+                out_path = a.split("=", 1)[1]
+                i += 1
+                continue
+            positional.append(a)
+            i += 1
+        if not positional:
+            print("faultline: 'attest' needs a file, e.g. faultline attest suite.py", file=sys.stderr)
+            return 2
+        suite = _load_suite(positional[0])
+        if suite is None:
+            return 2
+        return _run_attest(suite, out_path)
+
+    if cmd == "verify":
+        args = argv[1:]
+        if not args:
+            print("faultline: 'verify' needs a report, e.g. faultline verify faultline.report.json",
+                  file=sys.stderr)
+            return 2
+        return _run_verify(args[0])
 
     if cmd in MODE_COMMANDS:
         if len(argv) < 2:

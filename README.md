@@ -246,6 +246,41 @@ The action writes a verdict table to the job summary and exposes `verdict` /
 `0` clean, `1` silent failure found, `2` usage error (a misconfigured gate
 always fails — it never silently reads green).
 
+## Runtime guard (shadow → enforce)
+`faultline run`/`check` is the **test-time** product — it deliberately breaks your tools to catch silent failures *before* you ship. The **guard** is the same idea in **production**: a thin in-process seatbelt that sits in front of your agent's consequential actions and blocks one the moment it's about to fire on data that breaks a rule you set. Deterministic, no LLM judge. Start in **shadow** (observe), then flip to **enforce** (block):
+
+```python
+import faultline as fl
+
+place_order = fl.wrap(_place_order, is_action=True)   # your real action
+
+def no_oversell(action):                              # action = {"tool","args","kwargs"}
+    if action["tool"] == "place_order" and action["args"][1] > in_stock:
+        return "ordering more than is in stock"       # return a string => violation
+
+with fl.guard([no_oversell], mode="shadow", on_violation=alert):   # observe: action still fires
+    run_my_agent()
+with fl.guard([no_oversell], mode="enforce"):                       # block: raises fl.GuardBlocked
+    run_my_agent()
+```
+
+In `mode="shadow"` (the safe default) the action still runs and every violation is recorded and passed to `on_violation`; in `mode="enforce"` a violation raises `fl.GuardBlocked` and the real side-effect never runs. It reuses the same `fl.wrap(..., is_action=True)` you already have — nothing to re-wrap. `guard` is the production counterpart to `faultline run` (test-time): test-time *breaks* your tools to find the gap; the runtime guard *blocks* the bad action when the gap shows up live.
+
+## Attestation report (`attest` / `verify`)
+`faultline run` tells *you* the verdicts. `faultline attest` writes them down as a **tamper-evident evidence file** an auditor can keep and re-check later — without re-running your suite.
+
+```bash
+faultline attest faultline_suite.py --out faultline.report.json   # run + write the evidence file
+faultline verify faultline.report.json                            # re-derive the hash, confirm untampered
+```
+
+`attest` runs the suite exactly like `run` (same exit codes — non-zero on a silent failure or crash, so it still gates CI) and additionally writes `faultline.report.json` (a versioned v1 report: every per-fault verdict plus a SHA-256 **content hash** over a canonical, deterministic serialization of the verdict body). `verify` re-canonicalizes that body, recomputes the hash, and confirms it matches the stored one — so flipping a verdict or editing a number in the file changes the hash and `verify` exits non-zero and names the mismatch. A clean file prints `verified: N verdicts, hash OK` and exits `0`.
+
+What **"signed / reproducible / tamper-evident"** honestly means here — read this before quoting it:
+- The hash is a **SHA-256 content hash over a canonical form**, *not* a secret-key/asymmetric signature. faultline runs in your own CI with no server secret, so there is no private key to sign with. The honest claim is **tamper-evident + reproducible**: anyone can re-canonicalize and re-hash to detect edits, and `verify` re-derives the verdicts and confirms the hash.
+- It is **not** "cryptographically signed by faultline", **not** "tamper-proof", **not** a certification / compliance / SOC2 pass, and **not** independently attested. It is *evidence an auditor can cite*, produced and checkable entirely in your own environment.
+- The hash is **deterministic**: the canonical body sorts keys, fixes number formatting, and **excludes** every non-deterministic field — timestamp, duration, git SHA/branch/ref, CI run URL. Those still appear in the report for humans (under `meta`), but they live *outside* the hashed body, so two `attest` runs on the same deterministic suite produce the *same* hash.
+
 ## What this is / isn't
 - **Is:** a reliability tool for the people *building* AI agents — break the tools, find the silent failures, gate them in CI. Runs entirely in your own environment; it never sees your data.
 - **Isn't:** a security/jailbreak red-teamer (different problem, crowded space), and not an eval framework that only *measures* quality. faultline *injects* failures. It complements your evals; it doesn't replace them.

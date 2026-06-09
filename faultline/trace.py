@@ -12,6 +12,16 @@ import inspect
 
 _active: contextvars.ContextVar = contextvars.ContextVar("faultline_active", default=None)
 
+# The RUNTIME guard's active context — independent of the test Recorder above.
+# A test Recorder stubs is_action tools (so `fl.check` never fires a real order);
+# a guard does the opposite: it lets the REAL action run unless a rule blocks it.
+# guard.py reads/sets this var; the wrapper below consults it for action calls
+# when no Recorder is active. Kept here (not in guard.py) so the wrapper can read
+# it without importing guard — that would be a circular import.
+_active_guard: contextvars.ContextVar = contextvars.ContextVar(
+    "faultline_active_guard", default=None
+)
+
 
 class Recorder:
     """Accumulates EVENT dicts for a single agent run."""
@@ -45,6 +55,17 @@ def wrap(fn, is_action: bool = False, name=None):
     def wrapper(*args, **kwargs):
         recorder = _active.get()
         if recorder is None:
+            # No test Recorder active. If a RUNTIME guard is active and this is a
+            # consequential action, route it through the guard's rules: the guard
+            # runs them, then fires the REAL action (shadow / no-violation) or
+            # blocks it (enforce + violation). The guard only governs actions;
+            # plain tools pass through untouched.
+            g = _active_guard.get()
+            if g is not None and is_action:
+                nm = name or getattr(fn, "__name__", "tool")
+                return g._intercept_action(
+                    nm, args, kwargs, lambda: fn(*args, **kwargs)
+                )
             # no active session — pass-through
             return fn(*args, **kwargs)
 

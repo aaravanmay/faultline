@@ -11,6 +11,8 @@ SUITES = [
     ("CLI — all modes gate CI", "test_cli_modes.py"),
     ("GitHub Action — gate semantics", "test_action_local.py"),
     ("wave-3 detector — display-args / derived / pandas / dict-fuzz", "test_wave3_detector.py"),
+    ("runtime guard — shadow / enforce seatbelt", "test_guard.py"),
+    ("attest / verify — tamper-evident report", "test_attest.py"),
 ]
 print("faultline — full test suite")
 print("=" * 56)

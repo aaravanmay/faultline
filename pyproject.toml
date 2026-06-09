@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "faultline"
-version = "0.4.0"
+version = "0.4.1"
 description = "Multi-mode silent-failure testing for AI agents — break their tools, fuzz their inputs, replay their traces, mine their rules, and catch the 200-OK-but-wrong your evals miss."
 readme = "README.md"
 requires-python = ">=3.9"

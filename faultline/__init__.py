@@ -50,13 +50,17 @@ from .replay import record, replay, ReplayResult, save_trace, load_trace
 from .mine import mine, MinedSpec
 from .scenarios import scenarios, ScenariosResult
 from .fix import propose_fix
+from .guard import guard, GuardBlocked, GuardRuleError   # runtime seatbelt (production counterpart to check)
+from .attest import (                                     # Rung 3: tamper-evident evidence report
+    build_report, write_report, load_report, verify_report, compute_hash,
+)
 from .adapters import instrument, instrument_langchain, instrument_llamaindex
 from .invariants import (
     numeric_answer_finite, abstain_when_context_empty,
     no_poison_parroting, no_silent_shrink,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __all__ = [
     "check", "run_once", "tool", "wrap", "Result",
     "Fault", "WrongNumber", "StaleData", "Truncate", "NullResponse", "Timeout", "ServerError",
@@ -69,5 +73,7 @@ __all__ = [
     "mine", "MinedSpec",
     "scenarios", "ScenariosResult",
     "propose_fix",
+    "guard", "GuardBlocked", "GuardRuleError",
+    "build_report", "write_report", "load_report", "verify_report", "compute_hash",
     "instrument", "instrument_langchain", "instrument_llamaindex",
 ]
