@@ -42,7 +42,14 @@ def load_key(path=".env"):
 def _get_client():
     global _client
     if _client is None:
-        load_key()
+        key = load_key()
+        if not key:
+            raise RuntimeError(
+                "faultline's LLM features (propose_fix and the live-agent demos) need an Anthropic API "
+                "key. Set ANTHROPIC_API_KEY in your environment — faultline uses YOUR key and you pay "
+                "your own usage. The core testing modes (probe, fuzz, scenarios, check, replay, mine, "
+                "and the auto-instrument adapters) need no key at all."
+            )
         import anthropic  # imported lazily so faultline has no hard LLM dependency
         _client = anthropic.Anthropic()
     return _client

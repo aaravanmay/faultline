@@ -49,11 +49,60 @@ class WrongNumber(Fault):
         return type(v)(wrong)
 
     def hit(self, tool_name, args, kwargs, result):
-        if isinstance(result, (int, float)) and not isinstance(result, bool):
-            return self._bend(result)
-        if isinstance(result, dict):
-            return {k: self._bend(v) for k, v in result.items()}
-        return result
+        return self._corrupt(result)
+
+    def _corrupt(self, v):
+        # Recurse so a wrong number is injected wherever it lives — a bare value,
+        # a list of values, or numbers nested inside dicts/lists. Anything
+        # non-numeric passes through untouched (so it's never a silent no-op on
+        # the common list-of-numbers / nested-dict return shapes).
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, (int, float)):
+            return self._bend(v)
+        # pandas DataFrame/Series — detected by module name so pandas stays an
+        # OPTIONAL dependency: zero imports, zero cost when pandas is absent.
+        if (getattr(type(v), "__module__", "") or "").startswith("pandas"):
+            return self._corrupt_pandas(v)
+        if isinstance(v, dict):
+            return {k: self._corrupt(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [self._corrupt(x) for x in v]
+        if isinstance(v, tuple):
+            return tuple(self._corrupt(x) for x in v)
+        return v
+
+    def _bend_cell(self, x):
+        # numpy scalars (e.g. int64) are not Python ints — unbox via .item() so
+        # _bend's isinstance check sees a plain int/float.
+        if hasattr(x, "item"):
+            try:
+                x = x.item()
+            except (ValueError, TypeError):
+                return x
+        return self._bend(x)
+
+    def _corrupt_pandas(self, v):
+        """Bend the numeric columns of a pandas DataFrame (or a numeric Series).
+
+        - NEVER mutates the caller's object — always returns a corrupted copy.
+        - Only int/uint/float dtypes are bent (dtype.kind in 'iuf'); bool,
+          datetime, object and string columns pass through untouched.
+        - Anything that isn't a DataFrame/Series (Index, Timestamp, ...) is
+          returned unchanged.
+        """
+        kind = getattr(getattr(v, "dtype", None), "kind", None)
+        if kind is not None:                       # Series-like
+            if kind in "iuf":
+                return v.map(self._bend_cell)
+            return v.copy()
+        if hasattr(v, "columns"):                  # DataFrame-like
+            out = v.copy()
+            for col in out.columns:
+                if getattr(out[col].dtype, "kind", "") in "iuf":
+                    out[col] = out[col].map(self._bend_cell)
+            return out
+        return v
 
 
 class StaleData(Fault):

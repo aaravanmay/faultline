@@ -9,6 +9,7 @@ import os
 
 from .trace import run_once
 from .detect import classify_trial, suggest_fix
+from ._result import LoudResult
 
 
 def check(agent, task, faults, invariants=None, trials: int = 5, action_tools=None):
@@ -77,8 +78,11 @@ def check(agent, task, faults, invariants=None, trials: int = 5, action_tools=No
     return Result(baseline, rows)
 
 
-class Result:
+class Result(LoudResult):
     """Aggregated outcome of a check() run."""
+
+    def breakers(self):
+        return [r for r in self.rows if r["verdict"] in ("FAIL", "CRASH")]
 
     def __init__(self, baseline: dict, rows: list) -> None:
         self.baseline = baseline

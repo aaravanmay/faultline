@@ -30,13 +30,19 @@ def mutations(base, *mutators):
     return cases
 
 
-class ProbeResult:
+from ._result import LoudResult
+
+
+class ProbeResult(LoudResult):
     def __init__(self, rows, label):
         self.rows = rows
         self.label = label
 
     def silent(self):
         return [r for r in self.rows if r["status"] == "SILENT-WRONG"]
+
+    def breakers(self):
+        return [r for r in self.rows if r["status"] in ("SILENT-WRONG", "CRASH")]
 
     def report(self, write=True):
         lines = [
@@ -91,8 +97,10 @@ def probe(fn, cases, properties, label="probe", unpack=True):
         for p in properties:
             try:
                 msg = p(inp, out, err)
-            except Exception:  # a property that itself errors is inconclusive, not a finding
-                msg = None
+            except Exception as pe:  # a property that crashes is NOT a pass — surface it loudly
+                violations.append("PROPERTY ERROR: %s raised %s: %s — fix your property (signature is prop(inp, out, err))"
+                                  % (getattr(p, "__name__", "property"), type(pe).__name__, str(pe)[:60]))
+                continue
             if msg:
                 violations.append(msg)
         if violations:

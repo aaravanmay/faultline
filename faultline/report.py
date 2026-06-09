@@ -5,9 +5,10 @@ is a direct, lossless serialization of Result(baseline, rows) and matches the
 hosted platform's ``ingest_run(p_token, p_payload)`` Postgres RPC contract.
 
 Auto-used by ``faultline run --push`` (or whenever FAULTLINE_TOKEN is set):
-    FAULTLINE_URL    your project's REST base or full rpc/ingest_run endpoint
-    FAULTLINE_KEY    the project's public anon key (safe in CI)
-    FAULTLINE_TOKEN  the project token (flt_live_...) — keep in CI secrets
+    FAULTLINE_TOKEN  the project token (flt_live_...) — keep in CI secrets.
+                     This is the ONLY value you need for the hosted dashboard.
+    FAULTLINE_URL    (optional) override the REST base — only if self-hosting.
+    FAULTLINE_KEY    (optional) override the public anon key — only if self-hosting.
 """
 from __future__ import annotations
 
@@ -17,6 +18,15 @@ import urllib.error
 import urllib.request
 
 from .detect import suggest_fix
+
+# Hosted faultline dashboard — public endpoint + publishable anon key (the exact
+# same pair the web app ships in the browser; safe to embed). A project TOKEN is
+# what scopes a push to your project; URL/KEY only change if you self-host.
+HOSTED_URL = "https://szzrnyxjwxfdalwoxtej.supabase.co"
+HOSTED_KEY = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ"
+              "iI6InN6enJueXhqd3hmZGFsd294dGVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3"
+              "OTMxMzgsImV4cCI6MjA5NjM2OTEzOH0.biJabbevvVRdBbJ53R4_EBDqAdS31P60rb2P"
+              "PQB0S2U")
 
 
 def to_payload(result, agent="agent", duration_ms=None, trials=5):
@@ -93,12 +103,12 @@ def push_from_env(result, agent="agent", trials=5, duration_ms=None):
 
     Returns (True/False, message) when attempted, or (None, reason) when skipped.
     """
-    url = os.environ.get("FAULTLINE_URL")
-    key = os.environ.get("FAULTLINE_KEY")
+    # URL + anon key default to the hosted dashboard; only the token is required.
+    url = os.environ.get("FAULTLINE_URL") or HOSTED_URL
+    key = os.environ.get("FAULTLINE_KEY") or HOSTED_KEY
     token = os.environ.get("FAULTLINE_TOKEN")
-    if not (url and key and token):
-        missing = [n for n, v in (("FAULTLINE_URL", url), ("FAULTLINE_KEY", key),
-                                   ("FAULTLINE_TOKEN", token)) if not v]
-        return None, "missing env: %s" % ", ".join(missing)
+    if not token:
+        return None, ("missing env: FAULTLINE_TOKEN — create a token in your "
+                      "dashboard (Settings -> Tokens) and set it in CI secrets")
     payload = to_payload(result, agent=agent, duration_ms=duration_ms, trials=trials)
     return push(payload, url, key, token)

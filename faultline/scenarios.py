@@ -15,13 +15,19 @@ from __future__ import annotations
 from .trace import run_once
 
 
-class ScenariosResult:
+from ._result import LoudResult
+
+
+class ScenariosResult(LoudResult):
     def __init__(self, rows, label):
         self.rows = rows
         self.label = label
 
     def violations(self):
         return [r for r in self.rows if r["status"] == "UNSAFE"]
+
+    def breakers(self):
+        return self.violations() + self.crashes()
 
     def crashes(self):
         return [r for r in self.rows if r["status"] == "CRASH"]

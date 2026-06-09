@@ -1,29 +1,43 @@
-name: "faultline"
-description: "Chaos-test your AI agent on every PR — fail the build when a tool fault makes it silently do the wrong thing."
+name: "faultline — silent-failure gate"
+description: "Deterministically catch your AI agent silently doing the wrong thing — and fail the PR before it ships. No LLM judge, no flaky verdicts."
+author: "faultline"
 branding:
   icon: "alert-triangle"
-  color: "red"
+  color: "orange"
+
 inputs:
   suite:
-    description: "Path to a Python file that defines faultline_suite()."
+    description: "Path to the Python suite file (defines faultline_suite() — or a mode function for probe/fuzz/scenarios/replay/mine)."
     required: false
     default: "faultline_suite.py"
+  mode:
+    description: "Which testing mode to run: run (chaos check), probe, fuzz, scenarios, replay, or mine."
+    required: false
+    default: "run"
+  fail-on-silent:
+    description: "Fail the build when a silent failure is detected. Set to 'false' for report-only mode."
+    required: false
+    default: "true"
   python-version:
     description: "Python version to run on."
     required: false
-    default: "3.11"
-  faultline-url:
-    description: "Your faultline project URL (Supabase). Set to push results to the hosted dashboard."
-    required: false
-    default: ""
-  faultline-key:
-    description: "Your project's public anon key (safe in CI)."
-    required: false
-    default: ""
+    default: "3.12"
   faultline-token:
-    description: "Your project token — store it in repo secrets, e.g. ${{ secrets.FAULTLINE_TOKEN }}."
+    description: "Optional project token to push results to your hosted dashboard — store it in repo secrets. This is the ONLY variable needed for the hosted dashboard."
     required: false
     default: ""
+
+outputs:
+  verdict:
+    description: "PASS or FAIL"
+    value: ${{ steps.gate.outputs.verdict }}
+  breaks:
+    description: "Number of silent failures / broken checks detected"
+    value: ${{ steps.gate.outputs.breaks }}
+  checked:
+    description: "Number of checks evaluated"
+    value: ${{ steps.gate.outputs.checked }}
+
 runs:
   using: "composite"
   steps:
@@ -32,9 +46,17 @@ runs:
         python-version: ${{ inputs.python-version }}
     - shell: bash
       run: pip install faultline
-    - shell: bash
-      run: faultline run "${{ inputs.suite }}"
+    - id: gate
+      shell: bash
       env:
-        FAULTLINE_URL: ${{ inputs.faultline-url }}
-        FAULTLINE_KEY: ${{ inputs.faultline-key }}
         FAULTLINE_TOKEN: ${{ inputs.faultline-token }}
+      run: |
+        set +e
+        faultline "${{ inputs.mode }}" "${{ inputs.suite }}"
+        code=$?
+        set -e
+        # exit-code semantics: 0 clean · 1 silent failure(s) · 2 usage/load error.
+        # A usage error always fails — a misconfigured gate must never read green.
+        if [ "$code" -ge 2 ]; then exit "$code"; fi
+        if [ "$code" -eq 1 ] && [ "${{ inputs.fail-on-silent }}" = "true" ]; then exit 1; fi
+        exit 0

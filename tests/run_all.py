@@ -6,6 +6,11 @@ SUITES = [
     ("invariant library", "test_invariants.py"),
     ("modes — probe / fuzz / replay / mine", "test_modes.py"),
     ("scenarios — Method A (honest inputs)", "test_scenarios.py"),
+    ("adapters — auto-instrument tools", "test_adapters.py"),
+    ("loud results — no false green", "test_loud_result.py"),
+    ("CLI — all modes gate CI", "test_cli_modes.py"),
+    ("GitHub Action — gate semantics", "test_action_local.py"),
+    ("wave-3 detector — display-args / derived / pandas / dict-fuzz", "test_wave3_detector.py"),
 ]
 print("faultline — full test suite")
 print("=" * 56)

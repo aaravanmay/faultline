@@ -18,8 +18,9 @@ def _run(events=None, output=None, error=None):
     return {"events": events or [], "output": output, "error": error}
 
 
-def _ev(tool, result, args=None, kwargs=None):
-    return {"tool": tool, "args": args or [], "kwargs": kwargs or {}, "result": result}
+def _ev(tool, result, args=None, kwargs=None, faulted=False):
+    return {"tool": tool, "args": args or [], "kwargs": kwargs or {},
+            "result": result, "faulted": faulted}
 
 
 results = []
@@ -55,9 +56,11 @@ check("abstain: retrieval not used is quiet",
 # --- no_poison_parroting (WrongNumber/StaleData echoed verbatim) --------------
 inv = fl.no_poison_parroting(targets=["get_price"])
 check("parrot: corrupted value echoed in output fires",
-      inv(_run(events=[_ev("get_price", "999999")], output="The price is 999999 dollars.")) is not None)
+      inv(_run(events=[_ev("get_price", "999999", faulted=True)], output="The price is 999999 dollars.")) is not None)
 check("parrot: value not echoed is quiet",
-      inv(_run(events=[_ev("get_price", "999999")], output="I'm not certain about the price.")) is None)
+      inv(_run(events=[_ev("get_price", "999999", faulted=True)], output="I'm not certain about the price.")) is None)
+check("parrot: un-faulted real value echoed is quiet (no false positive)",
+      inv(_run(events=[_ev("get_price", "100")], output="The price is 100 dollars.")) is None)
 
 
 # --- no_silent_shrink (Aider data loss) --------------------------------------

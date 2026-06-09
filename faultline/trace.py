@@ -8,6 +8,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import functools
+import inspect
 
 _active: contextvars.ContextVar = contextvars.ContextVar("faultline_active", default=None)
 
@@ -20,11 +21,26 @@ class Recorder:
         self.fault = None
 
 
-def wrap(fn, is_action: bool = False):
+def wrap(fn, is_action: bool = False, name=None):
     """Return a wrapper around *fn* that participates in fault injection.
 
     If no Recorder is active the wrapper is transparent — it just calls fn.
+    *name* overrides the tool name faults target by (used by framework adapters so a
+    LangChain/LlamaIndex tool is targeted by its framework name, not the raw fn name).
     """
+    # Positional-parameter names, captured once at wrap time. They let the
+    # detector reason about WHICH argument of an action diverged (e.g. a
+    # display-only `message` arg vs a consequential `qty` arg). Builtins and
+    # C-callables without an inspectable signature degrade to [] gracefully.
+    try:
+        _arg_names = [
+            p.name for p in inspect.signature(fn).parameters.values()
+            if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                          inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+    except (TypeError, ValueError):
+        _arg_names = []
+
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         recorder = _active.get()
@@ -32,7 +48,7 @@ def wrap(fn, is_action: bool = False):
             # no active session — pass-through
             return fn(*args, **kwargs)
 
-        name = fn.__name__
+        nm = name or getattr(fn, "__name__", "tool")
 
         # For action tools we never invoke the real function; produce a stub.
         if is_action:
@@ -42,32 +58,56 @@ def wrap(fn, is_action: bool = False):
 
         faulted = False
         fault = recorder.fault
+        pre_fault_result = None
 
-        if fault is not None and fault.applies_to(name):
+        if fault is not None and fault.applies_to(nm):
             try:
-                result = fault.hit(name, list(args), dict(kwargs), result)
-                faulted = True
+                original = result
+                corrupted = fault.hit(nm, list(args), dict(kwargs), result)
+                # Only count the call as faulted if the fault actually CHANGED the
+                # value. StaleData's first call and WrongNumber on number-free data
+                # return the real value — blaming the agent for "handling" (or
+                # "parroting") a corruption that never happened produces false
+                # verdicts in both directions.
+                changed = corrupted is not original
+                if changed:
+                    try:
+                        changed = bool(corrupted != original)
+                    except Exception:          # ambiguous comparisons (DataFrames etc.)
+                        changed = True
+                result = corrupted
+                faulted = changed
+                if changed:
+                    # Keep the REAL (pre-corruption) value alongside the corrupted
+                    # one — the detector uses the (real, corrupted) pair to spot
+                    # outputs DERIVED from the corruption (sums, counts, products)
+                    # even when the injected value never appears verbatim.
+                    pre_fault_result = original
             except Exception:
                 # The fault raised — record it and re-raise.
                 event = {
-                    "tool": name,
+                    "tool": nm,
                     "args": list(args),
                     "kwargs": dict(kwargs),
+                    "arg_names": _arg_names[:len(args)],
                     "faulted": True,
                     "raised": True,
                     "result": None,
+                    "pre_fault_result": None,
                     "is_action": is_action,
                 }
                 recorder.events.append(event)
                 raise
 
         event = {
-            "tool": name,
+            "tool": nm,
             "args": list(args),
             "kwargs": dict(kwargs),
+            "arg_names": _arg_names[:len(args)],
             "faulted": faulted,
             "raised": False,
             "result": result,
+            "pre_fault_result": pre_fault_result,
             "is_action": is_action,
         }
         recorder.events.append(event)

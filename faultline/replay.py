@@ -35,7 +35,10 @@ def _actions(events):
     return sigs
 
 
-class ReplayResult:
+from ._result import LoudResult
+
+
+class ReplayResult(LoudResult):
     def __init__(self, findings, recorded, new, label):
         self.findings = findings
         self.recorded = recorded
@@ -44,6 +47,9 @@ class ReplayResult:
 
     def regressed(self):
         return bool(self.findings)
+
+    def breakers(self):
+        return list(self.findings)
 
     def report(self, write=True):
         lines = [
@@ -108,6 +114,13 @@ import json as _json
 
 
 def _jsonable(v):
+    # Recurse into containers so a single non-serializable leaf (e.g. a datetime
+    # buried in kwargs) is repr()'d on its own — without collapsing the whole
+    # list/dict into one string and losing the structure on load.
+    if isinstance(v, dict):
+        return {str(k): _jsonable(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_jsonable(x) for x in v]
     try:
         _json.dumps(v)
         return v

@@ -49,12 +49,14 @@ from .fuzz import fuzz, FuzzResult
 from .replay import record, replay, ReplayResult, save_trace, load_trace
 from .mine import mine, MinedSpec
 from .scenarios import scenarios, ScenariosResult
+from .fix import propose_fix
+from .adapters import instrument, instrument_langchain, instrument_llamaindex
 from .invariants import (
     numeric_answer_finite, abstain_when_context_empty,
     no_poison_parroting, no_silent_shrink,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = [
     "check", "run_once", "tool", "wrap", "Result",
     "Fault", "WrongNumber", "StaleData", "Truncate", "NullResponse", "Timeout", "ServerError",
@@ -66,4 +68,6 @@ __all__ = [
     "record", "replay", "ReplayResult", "save_trace", "load_trace",
     "mine", "MinedSpec",
     "scenarios", "ScenariosResult",
+    "propose_fix",
+    "instrument", "instrument_langchain", "instrument_llamaindex",
 ]

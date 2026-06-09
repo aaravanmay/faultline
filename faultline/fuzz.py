@@ -43,6 +43,47 @@ _LIST_MUTATORS = [
 ]
 
 
+def _bend_dict_numbers(d, depth=0):
+    """Multiply every numeric value by 1000 (0 -> 999), recursing ONE level into
+    nested dicts. Deterministic; non-numeric values pass through untouched."""
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, bool):
+            out[k] = v
+        elif isinstance(v, (int, float)):
+            out[k] = v * 1000 if v else 999
+        elif isinstance(v, dict) and depth < 1:
+            out[k] = _bend_dict_numbers(v, depth + 1)
+        else:
+            out[k] = v
+    return out
+
+
+def _drop_first_key(d):
+    out = dict(d)
+    for k in d:           # insertion order is deterministic in py3.7+
+        del out[k]
+        break
+    return out
+
+
+def _none_first_key(d):
+    out = dict(d)
+    for k in d:
+        out[k] = None
+        break
+    return out
+
+
+_DICT_MUTATORS = [
+    ("empty-dict", lambda d: {}),
+    ("drop-first-key", _drop_first_key),
+    ("none-first-key", _none_first_key),
+    ("bend-numerics", _bend_dict_numbers),
+    ("extra-unexpected-key", lambda d: dict(d, _faultline_unexpected="??")),
+]
+
+
 def _default_mutators(base):
     if isinstance(base, bool):
         return [("true", lambda b: True), ("false", lambda b: False)]
@@ -52,10 +93,15 @@ def _default_mutators(base):
         return _NUMBER_MUTATORS
     if isinstance(base, (list, tuple)):
         return _LIST_MUTATORS
+    if isinstance(base, dict):
+        return _DICT_MUTATORS
     return []
 
 
-class FuzzResult:
+from ._result import LoudResult
+
+
+class FuzzResult(LoudResult):
     def __init__(self, rows, label, tried):
         self.rows = rows
         self.label = label
@@ -133,8 +179,10 @@ def fuzz(fn, base, properties, mutators=None, include_pairs=True, label="fuzz", 
         for p in properties:
             try:
                 msg = p(inp, out, err)
-            except Exception:
-                msg = None
+            except Exception as pe:  # a property that crashes is NOT a pass — surface it loudly
+                violations.append("PROPERTY ERROR: %s raised %s: %s — fix your property (signature is prop(inp, out, err))"
+                                  % (getattr(p, "__name__", "property"), type(pe).__name__, str(pe)[:60]))
+                continue
             if msg:
                 violations.append(msg)
         if violations:

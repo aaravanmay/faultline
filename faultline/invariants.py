@@ -195,18 +195,33 @@ def no_poison_parroting(targets, faulted_only=True):
     (string form of the) corrupted result appears verbatim in the output, that's a parrot.
     """
     def inv(run):
-        out = _text(run.get("output"))
+        from .detect import _has_uncertainty, _leaves
+        raw_out = run.get("output")
+        out = _text(raw_out)
         if not out:
             return None
+        # An agent that echoes the bad value while REJECTING it (logging,
+        # "implausible", abstention) is doing the right thing — don't flag it.
+        if _has_uncertainty(raw_out):
+            return None
         for ev in _events(run, targets):
+            # When faulted_only (default), only a value the fault actually
+            # corrupted counts — echoing a REAL tool value is normal and must
+            # not be flagged as poison parroting.
+            if faulted_only and not ev.get("faulted"):
+                continue
             result = ev.get("result")
             if result is None:
                 continue
-            token = _text(result).strip()
-            # only flag distinctive, non-trivial tokens
-            if len(token) >= 3 and token in out:
-                return "corrupted value from %r (%r) was parroted verbatim into the output" % (
-                    ev.get("tool"), token[:60])
+            # Compare scalar LEAVES, not the str() of a whole container — the
+            # corrupted number usually hides inside a dict/list payload.
+            for leaf in _leaves(result):
+                if leaf is None or isinstance(leaf, bool):
+                    continue
+                token = _text(leaf).strip() if not isinstance(leaf, str) else leaf.strip()
+                if len(token) >= 3 and token in out:
+                    return "corrupted value from %r (%r) was parroted verbatim into the output" % (
+                        ev.get("tool"), token[:60])
         return None
     return inv
 

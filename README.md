@@ -4,6 +4,9 @@
 
 It does this **six ways**, all with the **same deterministic detector** — no LLM-judge, so it gates CI without flaking.
 
+**Not just LLM agents.** If something takes external data and makes a decision — a pricing function, a trading signal, a parser, a config loader — faultline applies. Wherever wrong data could make your code quietly do the wrong thing, it finds it. (The cleanest wins so far have been on plain numeric finance code, no LLM involved.)
+
+![CI](https://github.com/aaravanmay/faultline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -89,6 +92,20 @@ Resilience: 1/3 faults handled
 Suggested fixes (then re-run to verify): ...
 ```
 
+## Which mode do I use?
+
+| You have… | Start with | Looks like |
+|---|---|---|
+| a plain function (numeric, parsing, finance, config) | **`fuzz`** | `fl.fuzz(fn, base_input, [my_property])` |
+| an LLM agent / tool-using loop | **`check`** | `fl.check(agent, task, faults=[...], invariants=[...])` |
+| specific real cases to assert rules on | **`scenarios`** | `fl.scenarios(agent, cases, [my_invariant])` |
+| a model/prompt/dep change that must not regress | **`replay`** / **`mine`** | record today → replay after the change |
+
+Every mode returns the **same loud result** so you can never read a false green:
+`r.ok` (True only if nothing broke) · `r.failed` · `len(r)` (number of breaks) ·
+`r.breaks` (the list) · `r.assert_ok()` (raises for pytest/CI). Use these for logic;
+use `r.report()` to read a human breakdown.
+
 ## Install
 ```bash
 pip install faultline          # the engine is pure standard library — zero dependencies
@@ -138,10 +155,19 @@ result = fl.check(
     invariants=[must_not_oversell],
     trials=5,
 )
-result.report()
+
+result.report()        # human-readable breakdown
+result.assert_ok()     # raises AssertionError if ANYTHING broke — drop this in a test / CI
+# or branch on it:  if result.failed: ...   (len(result) = number of breaks)
 ```
 
 That's it. Your agent can be a raw loop, a LangChain `AgentExecutor`, a smolagents `ToolCallingAgent`, anything — faultline only needs the tool functions wrapped.
+
+> **Common pitfall — test the REAL function, not a tidied-up copy.** Import the
+> actual code you ship (`from myapp.pricing import quote`); don't paste a
+> simplified version into your test. A false PASS on an idealized copy is the one
+> way to walk away thinking "my code is fine" when it isn't. faultline is only as
+> honest as the code (and the invariant) you point it at.
 
 ## How it decides PASS / FAIL / CRASH — no LLM-judge, no oracle
 faultline runs each fault several times (default 5) and compares against a clean baseline run:
@@ -210,7 +236,15 @@ jobs:
       - uses: aaravanmay/faultline@main
         with:
           suite: faultline_suite.py
+          # mode: probe | fuzz | scenarios | replay | mine   (default: run)
+          # fail-on-silent: "false"   # report-only — never blocks the build
+          # faultline-token: ${{ secrets.FAULTLINE_TOKEN }}  # optional hosted dashboard
 ```
+The action writes a verdict table to the job summary and exposes `verdict` /
+`breaks` / `checked` as step outputs — wire them into a PR comment with
+`actions/github-script` if you want the report inline on the PR. Exit codes:
+`0` clean, `1` silent failure found, `2` usage error (a misconfigured gate
+always fails — it never silently reads green).
 
 ## What this is / isn't
 - **Is:** a reliability tool for the people *building* AI agents — break the tools, find the silent failures, gate them in CI. Runs entirely in your own environment; it never sees your data.
