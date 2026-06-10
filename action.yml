@@ -1,5 +1,5 @@
 name: "faultline — silent-failure gate"
-description: "Deterministically catch your AI agent silently doing the wrong thing — and fail the PR before it ships. No LLM judge, no flaky verdicts."
+description: "Deterministically catch your AI agent silently doing the wrong thing - and fail the PR before it ships. No LLM judge."
 author: "faultline"
 branding:
   icon: "alert-triangle"
