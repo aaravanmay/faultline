@@ -38,6 +38,7 @@ The first three feed **honest, valid input** and check the code's own output —
 
 | Mode | What it does | call |
 |---|---|---|
+| **scan** | zero-config: point it at your agent and break its tools — no suite file, no invariants | `fl.scan` · `faultline scan` |
 | **probe** | feed valid-but-edge inputs and assert a rule that must always hold | `fl.probe` |
 | **fuzz** | auto-generate edge inputs and discover the one that breaks it | `fl.fuzz` |
 | **scenarios** | run your *agent* through honest, hard real situations and assert a behavioral rule (e.g. "never order more than it has") | `fl.scenarios` |
@@ -46,6 +47,55 @@ The first three feed **honest, valid input** and check the code's own output —
 | **chaos** | break a tool's return on purpose (wrong/stale/empty) to test whether your agent has a *seatbelt* — a resilience test, not a bug-finder | `fl.check` |
 
 One install (`pip install faultline`, pure standard library), one detector. Full walkthrough in **[MODES.md](MODES.md)**.
+
+---
+
+### Get a verdict in 60 seconds — zero config
+
+No suite file, no hand-written rules. Wrap your tools (one decorator each) and point `scan` at your agent:
+
+```python
+import faultline as fl
+
+@fl.tool
+def get_inventory(sku): ...                 # your real tools
+place_order = fl.wrap(_place_order, is_action=True)
+
+def my_agent(task): ...                      # your real agent
+```
+```bash
+faultline scan my_agent.py:my_agent --task '{"sku": "A-12"}'
+```
+`scan` discovers your wrapped tools, breaks them with the default fault battery, and runs the built-in deterministic detector — **no invariants required**. It exits non-zero on a silent failure, so it gates CI out of the box.
+
+Or drop it straight into your existing pytest/unittest suite — no plugin, just an assertion:
+
+```python
+def test_my_agent_is_resilient():
+    fl.assert_resilient(my_agent, {"sku": "A-12"})    # raises (with the report) on any silent failure
+```
+
+### Works with your framework
+
+faultline wraps the **real tool seam**, so a fault actually reaches the tool your agent calls:
+
+```python
+from langgraph.prebuilt import create_react_agent
+graph = create_react_agent(model, tools)
+fl.instrument(graph, actions=["place_order"])         # langgraph / langchain / llamaindex — one call
+# now faults reach the real tools:
+fl.check(lambda t: graph.invoke(t), task, faults=[fl.WrongNumber(targets=["get_inventory"])])
+```
+Verified against real installed LangGraph and LangChain (`tests/test_langgraph_adapter.py`), including a deterministic end-to-end catch on a real `create_react_agent` (`faultline/examples/langgraph_catch.py`).
+
+### Catch a fabricated tool result
+
+The most-reported agent failure of 2025–26: the model *claims* it searched / queried and answers from a result it never actually got. Because faultline owns the real transport log, that's deterministic to catch — something an output-only eval can't see:
+
+```python
+fl.check(agent, task, faults=[...], invariants=[fl.tools_really_called(["search"])])
+# fails if the agent produced a confident answer without ever really calling search
+```
 
 ---
 
@@ -68,8 +118,8 @@ The model answered correctly; the *code* ignored it and shipped what isn't there
 
 ---
 
-### Found real bugs in famous AI projects — 6 pull requests open
-I pointed faultline's **probe** and **fuzz** modes (honest input → wrong output, never garbage-in) at popular open-source AI projects. Of the bugs found, **10 are unambiguous code defects** (a valid input produces objectively wrong output) and a handful are weaker "should-have-abstained-on-empty" cases. **Six are now open pull requests**, each with a regression test that fails before the fix and passes after:
+### Found real bugs in famous AI projects — pull requests filed
+I pointed faultline's **probe** and **fuzz** modes (honest input → wrong output, never garbage-in) at popular open-source AI projects. Of the bugs found, **10 are unambiguous code defects** (a valid input produces objectively wrong output) and a handful are weaker "should-have-abstained-on-empty" cases. **Six were filed as pull requests** (5 currently open, 1 closed by a repo bot), each with a regression test that fails before the fix and passes after:
 
 | Agent | ★ | Silent failure faultline caught | Fix |
 |---|---|---|---|
