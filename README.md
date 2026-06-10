@@ -12,6 +12,26 @@ It does this **six ways**, all with the **same deterministic detector** — no L
 
 ---
 
+### If any of these sound familiar
+
+The failure classes faultline is built for, in the words people actually report them:
+
+- **"The agent silently drops tool arguments"** — every tool suddenly called with an empty dict, no error.
+  faultline injects the empty/truncated payload on purpose and catches the agent acting on it.
+- **"The model fabricates tool results instead of calling the tool"** (also reported as *hallucinated tool
+  output*) — faultline intercepts at the tool boundary, so a claimed result that never maps to a real
+  invocation fails loudly. This class shows up in the wild constantly (see [`hunts/`](hunts/)).
+- **"Empty tool result, but it answered anyway"** — the abstain-when-empty invariant; the GPT-Researcher
+  catch (a confident 13k-char report written from zero sources) was exactly this.
+- **"The safeguard fails open"** — a check that silently bypasses instead of blocking. The runtime guard
+  (`fl.guard`, enforce mode) blocks the action instead of trusting the agent to stop itself.
+- **"Transient and hard to reproduce"** — deterministic injection makes it reproduce every run: same
+  input, same fault, same verdict. No 8-out-of-10-repeats statistics.
+- **"Behavioral drift after context compression / memory rotation"** — replay a pinned scenario and diff
+  the tool-call trace; drift that never throws shows up as trace divergence.
+
+---
+
 ### Six ways to provoke a silent failure
 
 The first three feed **honest, valid input** and check the code's own output — so a failure is a *real bug*, never "garbage in, garbage out."
