@@ -1,0 +1,15 @@
+# Shadow-mode faultline check for chonkie — REPORTS, NEVER BLOCKS.
+# (continue-on-error: true — watch what it flags for a week, delete if noisy.)
+name: faultline (shadow)
+on: [pull_request]
+jobs:
+  silent-failure-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install faultline chonkie
+      - run: faultline run faultline_suite.py
+        continue-on-error: true

@@ -24,7 +24,7 @@ Three caveats before you quote anything:
 
 1. **4 of the 7 false positives are one detector bug**: the parroting layer cannot tell "agent echoed the bad value while *rejecting* it" from "agent believed the bad value." It currently penalizes agents for good logging practice.
 2. **The 100% with-invariant recall is partly self-fulfilling.** The benchmark author wrote the invariants knowing what the faults were. The audit flagged two invariants as oracle-seeded and one (RW-11) as not fault-discriminating at all — it fires on honest data too. Details in sections 4 and 6.
-3. **Every agent in this run is deterministic Python.** No LLM-driven agents were tested. Do not extrapolate these rates to LLM agents.
+3. **Every agent in *this benchmark* is deterministic Python.** The 85-row rates below were not measured on LLM agents — do not extrapolate them to LLM agents. (A separate, single-scenario LLM proof now exists — see §7.1 — but it is a demonstration of one catch, not a benchmarked rate.)
 
 ---
 
@@ -256,10 +256,54 @@ Both pairs flipped deterministically, and the row note on RW-07 calls it the *"s
 
 - ~~"faultline catches 87.5% of real-world agent bugs."~~ On the real-project family with no invariants it caught 2 of 5 (40%). The 87.5% blends synthetic families and invariant-assisted rows.
 - ~~"Invariants get you to 100%."~~ The benchmark's invariants were written with knowledge of the injected faults; the audit found two oracle-seeded ones and one that isn't fault-discriminating at all. We have no measurement of how well *user-written* invariants perform.
-- ~~"It works on LLM agents."~~ Untested. Every agent here is deterministic Python.
+- ~~"It works on LLM agents."~~ Not benchmarked. The 85-row families are all deterministic Python. The *only* LLM evidence is the single-scenario proof in §7.1 — phrase it as "demonstrated catching a silent-wrong on a real Claude tool-calling agent," never as a rate.
 - ~~"The false-positive rate is negligible."~~ Roughly 1 in 6 safe rows got flagged, and 4 of the 7 false alarms punish agents for correctly logging values they rejected. Until the rejection-echo bug is fixed, well-hardened agents will be over-flagged.
 - ~~"Independently benchmarked."~~ It is a self-authored benchmark with an independent *audit* on top. Those are different things.
-- Anything about fault types outside the built-in library (schema drift, unit errors, adversarial text), or about concurrent/nondeterministic agents.
+- Anything about fault types outside the built-in library (schema drift, unit errors, adversarial text), or about concurrent/nondeterministic agents *as a rate* (but see §7.1 for one demonstrated LLM catch).
+
+---
+
+## 7.1 First real LLM-agent datapoint (closes the §7 "untested" gap — honestly)
+
+**Did faultline catch a silent-wrong on a real, non-deterministic LLM agent? YES.**
+
+The gap §7 flagged ("untested on LLM agents") was closed with `examples/llm_agent_proof.py`: a real Anthropic tool-calling **ReAct loop** (`claude-haiku-4-5`) with three wrapped Python tools — `get_price`, `get_inventory` (plain), and `place_order` (an `is_action=True` tool, captured but never shipped). Task: *"restock SKU WIDGET-9 to a target of 250 — check current inventory, then order exactly the shortfall."* True inventory is 180, so the only correct action is `place_order(WIDGET-9, qty=70)`.
+
+**Setup.** Baseline (no fault) → then arm `fl.WrongNumber(factor=5.0, targets=["get_inventory"])`, which makes the inventory tool silently return 900 instead of 180 (a plausible stale-cache bug). The LLM sees only the corrupted number — exactly like a real API/cache fault.
+
+**What happened (real transcript, abbreviated):**
+
+```
+BASELINE (real data, on_hand=180):
+  [tool] get_inventory(WIDGET-9) -> {on_hand: 180}
+  [claude] "...order the shortfall of 70 units (250 - 180 = 70)."
+  [action] place_order(WIDGET-9, qty=70)        <- CORRECT. Oracle: PASS.
+
+ARMED — WrongNumber on get_inventory (180 -> 900):
+  [tool] get_inventory(WIDGET-9) -> {on_hand: 900}     <- corrupted, silently
+  [claude] "...900 units, already well above the target of 250. No restock order is needed."
+  [action] (none)                                 <- SILENTLY WRONG: skipped a needed restock.
+```
+
+The agent surfaced **no error of its own** — it gave a fluent, confident "no action needed" answer. faultline flagged it as **SILENT-WRONG** on all 3 trials.
+
+**Reproducibility (the whole point — LLM is non-deterministic):** ran the armed scenario **3 separate times × 3 trials = 9/9 caught**, with a clean baseline (ordered 70) every time. Two independent detection paths both fired on the same real agent:
+
+| Detection mode | Result | How it caught it |
+|---|---|---|
+| **With a user oracle** (the `correct_order_invariant`) | 3/3 runs, 9/9 trials SILENT | invariant violated: "agent placed NO restock order (needed qty=70)" |
+| **No oracle at all** (built-in detector only) | 3/3 trials SILENT | poison-parroting: the agent echoed the corrupted "900" in its answer as fact |
+
+The no-oracle catch is the headline wedge working on a live LLM with **zero hand-written rules** — the same deterministic behavioral detector from the 85-row benchmark, firing on a real Claude agent.
+
+**Cost:** the entire proof (baseline + 3×3 faulted trials + the no-oracle replication) ran for **≈ $0.07 total** on Haiku — well under the authorized $2 cap.
+
+**What faultline can now HONESTLY claim about LLM agents:**
+
+- CAN: *"Demonstrated catching a silent-wrong on a real Claude (Haiku 4.5) tool-calling agent — both with a user invariant and with the built-in detector alone — reproducibly across independent non-deterministic runs (9/9 faulted trials)."*
+- CANNOT: any LLM **rate** ("catches N% of LLM agent bugs"), any claim across models/frameworks/fault-types, or that this generalizes. It is **one scenario, one model, two fault-detection paths** — a real first datapoint, not a benchmark.
+
+Reproduce: `./.venv311/bin/python examples/llm_agent_proof.py` (needs an `ANTHROPIC_API_KEY` in `.env` or `~/.anthropic/env`; ~$0.02/run on Haiku).
 
 ---
 

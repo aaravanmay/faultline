@@ -1,0 +1,46 @@
+/Users/aaravgoenka/Projects/Antigravity/Claude/faultline/.venv311/lib/python3.11/site-packages/requests/__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.4.3)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+Warning: Input is not a terminal (fd=0).
+faultline · THE HUNT — Aider (silent data loss under a truncated read)
+
+mathutils.py
+
+```diff
+@@ -1,8 +1,8 @@
+ # math utils — bug in the TOP half, important code in the BOTTOM half
+ def add(a, b):
+-    return a - b          # BUG: should be a + b
++    return a + b
+ 
+ def subtract(a, b):
+     return a - b
+ 
+ def multiply(a, b):
+```
+
+
+Tokens: 817 sent, 85 received. Cost: $0.0012 message, $0.0012 session.
+Applied edit to mathutils.py
+================================================================
+file        : /tmp/claude-501/tmpergawtn6/mathutils.py
+fault armed : True (read_text truncated to first half)
+lines       : before 25  ->  after 13
+bottom-half markers lost: ['area_of_circle', 'describe', 'perimeter']
+
+⚠ SILENT FAILURE — aider wrote the file back MISSING code it never read (truncated read → data loss), with no error. THAT's the catch.
+  PR: guard read_text (assert the read was complete) or assert no-shrink before write; + a regression test in tests/basic/.
+
+----- file AFTER the run -----
+# math utils — bug in the TOP half, important code in the BOTTOM half
+def add(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+
+def multiply(a, b):
+    return a * b
+
+def divide(a, b):
+    return a / b
+
