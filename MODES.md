@@ -143,6 +143,9 @@ spec.check(fl.run_once(broken_agent, "ship order #99"))
 
 ---
 
+
+_Runnable: `python3 examples/mine_demo.py` — learns validate→ship ordering, catches a refactor that skips validation._
+
 ## 6. chaos — break its tools (resilience test)
 
 Break a tool's return on purpose — wrong number, stale data, empty result, a 500 — and see whether the
