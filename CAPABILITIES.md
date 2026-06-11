@@ -72,6 +72,16 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
 - **Wording:** "catches a tool result the agent answered from but never actually fetched." NOT "catches all
   fabrication / hallucination." Keep the "confident, non-abstaining" qualifier; never imply zero false-positives.
 
+## concurrency / thread-safety
+- **Verified:** the fault arming is per-thread isolated (contextvars), so concurrent runs with **fresh /
+  stateless faults** don't cross-contaminate (8 rounds × 16 threads, clean — `tests/test_concurrency.py`).
+  Safe for CI parallelism and a production fleet using the normal one-fault-per-run pattern.
+- **Blind spot:** a single **stateful fault instance** (e.g. one `StaleData()`) **shared across threads** is
+  NOT safe — its `_seen` cache is a plain dict and races. Use a fresh fault instance per concurrent run.
+  Making stateful faults thread-local is a deferred robustness item (DEFERRED_FIXES.md).
+- **Wording:** "thread-safe for the standard one-fault-per-run pattern," not "thread-safe to share fault
+  objects across threads."
+
 ## async agents / tools
 - **Scope:** faultline is **sync-only** today. An async *agent* (`async def agent`) now **fails loud** with
   a clear error + the workaround (wrap it: `lambda task: asyncio.run(my_async_agent(task))`) — it no longer
