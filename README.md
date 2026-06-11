@@ -59,7 +59,7 @@ The first three feed **honest, valid input** and check the code's own output —
 | **mine** | watch good runs and let the tool *learn the rules itself*, then enforce them | `fl.mine` |
 | **chaos** | break a tool's return on purpose (wrong/stale/empty) to test whether your agent has a *seatbelt* — a resilience test, not a bug-finder | `fl.check` |
 
-One install (`pip install faultline`, pure standard library), one detector. Full walkthrough in **[MODES.md](MODES.md)**. How it differs from evals / LLM-judges / guardrails: **[COMPARISON.md](COMPARISON.md)**.
+One install (`pip install faultline`, pure standard library), one detector. Full walkthrough in **[MODES.md](MODES.md)**. How it differs from evals / LLM-judges / guardrails: **[COMPARISON.md](COMPARISON.md)**. Stuck? **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
 
 ---
 
