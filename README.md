@@ -52,6 +52,9 @@ One install (`pip install faultline`, pure standard library), one detector. Full
 
 ### Get a verdict in 60 seconds — zero config
 
+> **New in 0.4.2** (the rest of this section through "Catch a fabricated tool result"). If `faultline scan`
+> isn't found, you're on an older release — `pip install -U faultline`.
+
 No suite file, no hand-written rules. Wrap your tools (one decorator each) and point `scan` at your agent:
 
 ```python
