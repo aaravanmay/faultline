@@ -174,6 +174,55 @@ Faults: `WrongNumber`, `StaleData`, `Truncate`, `NullResponse`, `Timeout`, `Serv
 
 ---
 
+## Beyond the modes — zero-config, frameworks, fabrication, drift
+
+### `scan` — the zero-config front door
+No suite file, no invariants. Wrap your tools, point it at your agent:
+```bash
+faultline scan my_agent.py:my_agent --task '{"sku": "A-12"}'
+```
+It discovers your wrapped tools, hits them with the default battery (WrongNumber, StaleData, Truncate,
+NullResponse, EmptyResult, Timeout, ServerError), and runs the built-in detector — gates CI on exit code.
+`result, tools = fl.scan(agent, task)` is the API form.
+
+### `fl.assert_resilient` — drop into your existing tests
+No plugin to install; it's a plain assertion that raises (with the full report) on any silent failure:
+```python
+def test_my_agent_is_resilient():
+    fl.assert_resilient(my_agent, {"sku": "A-12"})        # faults=None -> the scan battery
+    fl.assert_resilient(my_agent, task, faults=[fl.StaleData(targets=["get_price"])])  # or targeted
+```
+
+### Framework adapters — wrap the real tool seam
+faultline wraps the actual callable your framework executes, so a fault genuinely reaches the tool:
+```python
+fl.instrument(graph_or_tools, actions=["place_order"])    # langgraph / langchain / llamaindex (idempotent)
+# or be explicit: fl.instrument_langgraph(graph) / fl.instrument_langchain(tools) / fl.instrument_llamaindex(tools)
+```
+Verified against real installed **langgraph**, **langchain**, and **llama-index** (`tests/test_*_real.py`),
+including a deterministic end-to-end catch on a real `create_react_agent` (`examples/langgraph_catch.py`).
+
+### `tools_really_called` — catch a fabricated tool result
+The #1 reported agent failure: the model *claims* it searched/queried and answers from a result it never
+got. Because faultline owns the real transport log, that's deterministic to catch:
+```python
+fl.check(agent, task, faults=[...], invariants=[fl.tools_really_called(["search"])])
+```
+Fires only on a confident, non-abstaining answer with no real call. Abstention is keyword-detected; pass
+your phrases: `fl.tools_really_called(["search"], abstain_markers=fl.DEFAULT_ABSTAIN_MARKERS + ("no hits",))`.
+
+### `replay(transform=)` — drift after context compression
+Re-run a recorded trace through a context transform (compression / rotation / a new prompt) and diff the
+behavior — the "agent silently changed after compression" class:
+```python
+rec = fl.record(agent, task)
+r = fl.replay(agent, rec, watch=lambda o: {"decision": o["decision"]},
+              transform=lambda t: {**t, "context": t["context"][:512]})   # pure + deterministic
+r.regressed()   # True if the decision silently flipped
+```
+
+---
+
 ## All six in CI
 
 Each mode's result object has `.regressed()` / `.silent()` / `.breakers()` / `.violations()` returning
