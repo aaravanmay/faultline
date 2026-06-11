@@ -96,6 +96,27 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
   "attests the verdicts," never "attests the run's provenance." (And it's a content hash, not a crypto
   signature — never say "cryptographically signed.")
 
+## record / the trace log (used by replay, scenarios, mine)
+- **Catches:** what the agent did — every tool call, its args, and result, recorded as it happened.
+- **Blind spot — args/result recorded by reference (adversarial-found, fix deferred, core-wrapper).** The
+  event log shallow-copies args/kwargs/result. If your agent **mutates an argument object after the call**
+  (e.g. `cart.clear()` after `place_order(cart)`), an invariant that reads `event["args"]` sees the
+  *post-mutation* state, not what the tool was actually called with — which can mask a real action bug
+  (a false PASS). Today: have invariants read the agent's *output/decision*, not mutated input objects; or
+  don't mutate args in place. (Deep-copying at capture is a core-wrapper change — broad blast radius, an
+  attended-release fix.)
+- **Blind spot — a tool that raises its OWN exception (no fault active) is not recorded** as an event
+  (an injected fault that raises IS). So `mine`/post-mortem can't see a real tool that was called and threw.
+  Also deferred to the same attended core-wrapper pass.
+
+## guard (runtime seatbelt — shadow / enforce)
+- **Catches:** at runtime, a rule firing on an action — in `enforce` it blocks the action (fail-closed),
+  in `shadow` it records the hit and lets the action fire (observe before you block).
+- **Blind spot / wording:** a rule that **itself raises an exception** is re-raised in BOTH modes
+  (`GuardRuleError`) — including shadow. That's deliberate (a crashing rule is a bug to fix, not a violation
+  to silently log), but it means a *buggy* rule can abort a real action even in shadow. **Keep shadow rules
+  exception-safe**; "shadow never affects production" holds only for rules that return cleanly.
+
 ## The wild-catches / PRs
 - **5 PRs open, 1 closed** (LangChain #37964, closed by a repo bot — never call it a win). The
   `evidence/wild_catches/` Haystack item is a **demonstration** ("faultline's invariant fires on a real
