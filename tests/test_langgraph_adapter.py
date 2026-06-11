@@ -69,7 +69,11 @@ expect("ToolNode — fault NOW reaches the tool after instrument",
        after["output"].get("units") != 240)
 
 # ── 2. compiled create_react_agent path (constructs without an LLM call) ──
-graph = create_react_agent("anthropic:claude-haiku-4-5-20251001", [make_tool()])
+# Use the deterministic stand-in model, not the "provider:model" string shortcut — the string
+# form requires the full `langchain` package (not just langchain-core), which CI doesn't install.
+from faultline.examples.langgraph_catch import RestockModel
+
+graph = create_react_agent(RestockModel(), [make_tool()])
 gtool = _extract_langgraph_tools(graph)[0]
 gbefore = fl.run_once(invoke_agent(gtool), {}, WN())
 expect("compiled graph — fault does NOT reach before instrument (fail-first)",
