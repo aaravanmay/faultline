@@ -103,7 +103,7 @@ faultline wraps the **real tool seam**, so a fault actually reaches the tool you
 ```python
 from langgraph.prebuilt import create_react_agent
 graph = create_react_agent(model, tools)
-fl.instrument(graph, actions=["place_order"])         # langgraph / langchain / llamaindex — one call
+fl.instrument(graph, actions=["place_order"])         # langgraph / langchain / llamaindex / pydantic-ai / crewai — one call
 # now faults reach the real tools:
 fl.check(lambda t: graph.invoke(t), task, faults=[fl.WrongNumber(targets=["get_inventory"])])
 ```
