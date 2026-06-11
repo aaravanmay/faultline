@@ -44,7 +44,7 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
 
 ## instrument / instrument_langgraph / _langchain / _llamaindex / _pydantic_ai
 - **Catches:** nothing by itself — it *wires* faults into a framework agent's real tools so check/scan can.
-- **Verified:** against real installed **langgraph 1.x, langchain 1.4.x, llama-index 0.14, pydantic-ai** (fail-first
+- **Verified:** against real installed **langgraph 1.x, langchain 1.4.x, llama-index 0.14, pydantic-ai, crewAI** (fail-first
   tests: a fault provably does NOT reach the tool before instrument, and DOES after).
 - **Blind spot:** wraps the tool callable seam (`.func` / `_fn` / `ToolNode.tools_by_name`). A framework
   version that routes tool execution through a different attribute would need a re-verify (the tests catch
