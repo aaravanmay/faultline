@@ -10,6 +10,19 @@ It does this **six ways**, all with the **same deterministic detector** — no L
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+### Quickstart — first verdict in 2 minutes, no API key
+
+```bash
+pip install faultline
+faultline demo                               # watch it catch a silent failure in a tiny agent
+faultline init                               # scaffold faultline_suite.py + a CI workflow
+faultline doctor faultline_suite.py:agent    # preflight: can faultline test this agent?
+faultline run faultline_suite.py             # break the tools; exit 1 if it silently fails
+```
+
+Then edit `faultline_suite.py` — drop in your agent, wrap your tools — and re-run. The whole loop:
+**install → see it work → scaffold → gate CI.** (Every command above runs offline, no key.)
+
 ---
 
 ### If any of these sound familiar
