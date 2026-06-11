@@ -89,7 +89,7 @@ fl.instrument(graph, actions=["place_order"])         # langgraph / langchain / 
 # now faults reach the real tools:
 fl.check(lambda t: graph.invoke(t), task, faults=[fl.WrongNumber(targets=["get_inventory"])])
 ```
-Verified against real installed LangGraph and LangChain (`tests/test_langgraph_adapter.py`), including a deterministic end-to-end catch on a real `create_react_agent` (`faultline/examples/langgraph_catch.py`).
+Verified against real installed LangGraph, LangChain, LlamaIndex and pydantic-ai (`tests/test_langgraph_adapter.py`), including a deterministic end-to-end catch on a real `create_react_agent` (`faultline/examples/langgraph_catch.py`).
 
 ### Catch a fabricated tool result
 

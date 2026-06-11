@@ -196,10 +196,10 @@ def test_my_agent_is_resilient():
 ### Framework adapters — wrap the real tool seam
 faultline wraps the actual callable your framework executes, so a fault genuinely reaches the tool:
 ```python
-fl.instrument(graph_or_tools, actions=["place_order"])    # langgraph / langchain / llamaindex (idempotent)
+fl.instrument(graph_or_tools, actions=["place_order"])    # langgraph / langchain / llamaindex / pydantic-ai (idempotent)
 # or be explicit: fl.instrument_langgraph(graph) / fl.instrument_langchain(tools) / fl.instrument_llamaindex(tools)
 ```
-Verified against real installed **langgraph**, **langchain**, and **llama-index** (`tests/test_*_real.py`),
+Verified against real installed **langgraph**, **langchain**, **llama-index**, and **pydantic-ai** (`tests/test_*_real.py`),
 including a deterministic end-to-end catch on a real `create_react_agent` (`examples/langgraph_catch.py`).
 
 ### `tools_really_called` — catch a fabricated tool result
