@@ -35,6 +35,8 @@ is a **recorded fact**, not an inference. That makes verdicts reproducible and C
 exact benchmark for the detector are in [CAPABILITIES.md](CAPABILITIES.md); the 85-case figures there are a
 deterministic-Python benchmark, not a claim about LLM agents.)
 
+**See it yourself:** `python3 examples/vs_eval.py` runs one agent two ways — a plain eval goes green on clean data, then faultline breaks the retrieval tool and catches the same agent fabricating an answer. The gap, executable.
+
 ## faultline complements your evals — it doesn't replace them
 - **Evals** tell you the agent is right on the cases you thought of. Keep them.
 - **Guardrails** validate shape and block bad I/O at runtime. Keep them.
