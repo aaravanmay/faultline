@@ -1,0 +1,39 @@
+# faultline — catch a silent failure in 60 seconds
+
+# 1. install — pure standard library, zero dependencies
+$ pip install faultline
+Successfully installed faultline-0.3.0
+
+# 2. try it instantly — no setup, no API key
+$ faultline demo
+faultline is driving a demo agent and breaking its tools...
+UNSAFE  wrong-number   [SILENT, SILENT, SILENT]   ordered out-of-stock goods
+faultline: 2 fault(s) not handled  ->  exit 1
+
+# 3. now test YOUR agent: write one rule it must never break
+$ cat faultline_suite.py
+import faultline as fl
+
+@fl.tool
+def get_inventory(item):
+    return 2                        # really only 2 in stock
+
+def agent(task):
+    stock = get_inventory(task["item"])
+    if task["qty"] <= stock:
+        place_order(task["item"], task["qty"])
+        return {"decision": "ORDER"}
+    return {"decision": "DECLINE"}
+
+def faultline_suite():
+    return {"agent": agent,
+            "task": {"item": "widget", "qty": 5},
+            "faults": [fl.WrongNumber(targets=["get_inventory"])]}
+
+# 4. run it — faultline breaks the tool on purpose and watches
+$ faultline run faultline_suite.py
+UNSAFE  wrong-number   [SILENT]   took action on corrupted data it would NOT on real data
+faultline: 1 silent failure caught  ->  exit 1
+
+# the agent placed an order on a faked stock number. No error. No crash.
+# faultline caught it. Add it to CI and it never ships again.

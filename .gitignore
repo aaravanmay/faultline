@@ -15,3 +15,5 @@ faultline-report.md
 junk/
 .claude/skills/
 .claude/settings.local.json
+.pypi-token
+.env

@@ -227,13 +227,17 @@ def _parroted_value(corrupted_values, faulted_output, baseline_output):
     """
     fs = "" if faulted_output is None else str(faulted_output)
     bs = "" if baseline_output is None else str(baseline_output)
+    # Also compare against a thousands-separator-stripped view, so a corrupted value parroted as
+    # "$6,000" (separators) is matched against "6000" — without losing any existing match.
+    fs_n = _strip_thousands(fs)
+    bs_n = _strip_thousands(bs)
     for v in corrupted_values:
         if v is None or isinstance(v, bool):
             continue
         s = str(v)
         if len(s) < 2:
             continue
-        if s in fs and s not in bs:
+        if (s in fs and s not in bs) or (s in fs_n and s not in bs_n):
             return s
     return None
 
@@ -317,6 +321,16 @@ def _has_uncertainty(output):
 #     — an agent that says "implausible, refusing" did its job.
 
 _NUM_TOKEN_RE = re.compile(r"-?\d+(?:\.\d+)?")
+
+# A comma used as a US thousands-separator (between a digit and exactly 3 more digits, e.g. the
+# "," in "$6,000" or "1,200,000"). Stripping these before tokenizing numbers lets the parroting +
+# derived-value layers see "$6,000" as 6000 (not the tokens [6, 000]) — without which a corrupted
+# financial figure stated verbatim in the output slips through as a false negative.
+_THOUSANDS_RE = re.compile(r"(?<=\d),(?=\d{3}(?:\D|$))")
+
+
+def _strip_thousands(s):
+    return _THOUSANDS_RE.sub("", s)
 
 _REL_TOL = 1e-3   # tolerance for ratio/delta lockstep (absorbs round(x, 2) etc.)
 
@@ -419,8 +433,8 @@ def _walk_aligned_numbers(b, f, pairs):
                 _walk_aligned_numbers(bv, fv, pairs)
         return
     if isinstance(b, str) and isinstance(f, str):
-        tb = _NUM_TOKEN_RE.findall(b)
-        tf = _NUM_TOKEN_RE.findall(f)
+        tb = _NUM_TOKEN_RE.findall(_strip_thousands(b))
+        tf = _NUM_TOKEN_RE.findall(_strip_thousands(f))
         if tb and len(tb) == len(tf):
             for sb, sf in zip(tb, tf):
                 try:

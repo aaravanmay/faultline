@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faultline — Cofounder Brief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;1,18..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15171E; --ink2:#3C414F; --muted:#6B7280; --faint:#9AA1AE;
+    --bg:#FAF8F4; --paper:#FFFFFF; --line:#E7E2D9;
+    --blue:#2563EB; --blue-soft:#EAF0FE;
+    --amber:#C9740A; --amber-soft:#FBF1E2;
+    --green:#1A7F4B; --green-soft:#E8F4ED;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Newsreader",Georgia,serif;
+    font-size:20px; line-height:1.75; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .doc{max-width:760px; margin:0 auto; padding:64px 28px 120px}
+
+  /* ---- masthead ---- */
+  .mast{display:flex; align-items:center; gap:12px; font-family:"Inter",sans-serif; margin-bottom:54px}
+  .mast .logo{display:flex; align-items:center; gap:9px; font-weight:700; font-size:20px; letter-spacing:-.02em}
+  .mast .logo b{color:var(--blue); font-weight:700}
+  .mast .tag{margin-left:auto; font-size:13px; color:var(--muted); font-weight:500; letter-spacing:.02em}
+
+  /* ---- titles ---- */
+  h1{font-family:"Inter",sans-serif; font-weight:800; font-size:54px; line-height:1.04;
+     letter-spacing:-.035em; margin:0 0 6px; color:var(--ink)}
+  .seam{display:block; width:100%; height:14px; margin:14px 0 22px; color:var(--blue)}
+  .kicker{font-family:"Inter",sans-serif; font-weight:600; font-size:13.5px; letter-spacing:.14em;
+          text-transform:uppercase; color:var(--blue); margin-bottom:20px}
+  .lede{font-size:25px; line-height:1.55; color:var(--ink2); font-weight:400; margin:0 0 8px}
+  .lede em{font-style:italic; color:var(--ink)}
+
+  h2{font-family:"Inter",sans-serif; font-weight:700; font-size:31px; line-height:1.15;
+     letter-spacing:-.025em; margin:62px 0 18px; color:var(--ink); scroll-margin-top:20px}
+  h2 .n{color:var(--faint); font-weight:600; font-size:21px; margin-right:12px; font-variant-numeric:tabular-nums}
+  h3{font-family:"Inter",sans-serif; font-weight:650; font-size:20px; letter-spacing:-.01em; margin:34px 0 6px; color:var(--ink)}
+
+  p{margin:0 0 20px}
+  a{color:var(--blue); text-decoration:none; border-bottom:1px solid rgba(37,99,235,.3)}
+  strong{font-weight:600; color:var(--ink)}
+  .mono{font-family:"JetBrains Mono",monospace; font-size:.82em; background:rgba(21,23,30,.05);
+        padding:2px 7px; border-radius:6px; color:var(--ink2)}
+
+  /* ---- big pull quote ---- */
+  .quote{font-family:"Inter",sans-serif; font-weight:800; font-size:38px; line-height:1.12;
+         letter-spacing:-.03em; color:var(--ink); margin:40px 0; padding-left:24px;
+         border-left:4px solid var(--amber)}
+  .quote .amber{color:var(--amber)}
+
+  /* ---- lists ---- */
+  ul{margin:0 0 22px; padding:0; list-style:none}
+  ul li{position:relative; padding-left:30px; margin-bottom:14px}
+  ul li::before{content:""; position:absolute; left:6px; top:14px; width:7px; height:7px;
+                border-radius:50%; background:var(--blue)}
+  ol{margin:0 0 22px; padding-left:26px}
+  ol li{margin-bottom:16px; padding-left:6px}
+  ol li::marker{font-family:"Inter",sans-serif; font-weight:700; color:var(--blue)}
+
+  /* ---- callout cards ---- */
+  .card{border-radius:14px; padding:24px 26px; margin:30px 0; font-size:18.5px; line-height:1.65;
+        font-family:"Inter",sans-serif; border:1px solid var(--line); background:var(--paper)}
+  .card .lab{font-weight:700; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px}
+  .card.built{background:var(--green-soft); border-color:#CBE6D6}
+  .card.built .lab{color:var(--green)}
+  .card.honest{background:var(--amber-soft); border-color:#EFD9B6}
+  .card.honest .lab{color:var(--amber)}
+  .card.note{background:var(--blue-soft); border-color:#CFE0FD}
+  .card.note .lab{color:var(--blue)}
+  .card ul{margin:0} .card ul li{margin-bottom:9px; font-size:17.5px}
+  .card ul li::before{top:12px}
+  .card p:last-child{margin-bottom:0}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+  hr{border:none; border-top:1px solid var(--line); margin:54px 0}
+  .small{font-size:16px; color:var(--muted); font-family:"Inter",sans-serif; line-height:1.6}
+  .sign{font-size:21px; color:var(--ink2)}
+
+  /* ---- footer / tech ---- */
+  .tech{font-family:"Inter",sans-serif; font-size:16.5px; line-height:1.6; color:var(--ink2)}
+  .tech .row{display:flex; gap:14px; padding:11px 0; border-bottom:1px solid var(--line)}
+  .tech .row b{flex:0 0 130px; color:var(--ink); font-weight:600}
+  footer{margin-top:70px; padding-top:24px; border-top:1px solid var(--line);
+         font-family:"Inter",sans-serif; font-size:14px; color:var(--faint)}
+
+  @media (max-width:600px){
+    body{font-size:18.5px} .doc{padding:44px 20px 90px}
+    h1{font-size:40px} .lede{font-size:21px} .quote{font-size:28px} h2{font-size:26px}
+  }
+  @media print{
+    body{background:#fff; font-size:12pt}
+    .doc{max-width:none; padding:0}
+    .card{break-inside:avoid} h2{break-after:avoid}
+    a{border:none; color:var(--ink)}
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <div class="mast">
+    <span class="logo">
+      <svg width="26" height="16" viewBox="0 0 25 16" fill="none" aria-hidden="true"><path d="M1 11H8.5L12.5 3.5" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.5 12.5L15.5 5H24" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      fault<b>line</b>
+    </span>
+    <span class="tag">Cofounder brief · 2026</span>
+  </div>
+
+  <div class="kicker">Chaos engineering for AI agents</div>
+  <h1>The failure no one is testing for.</h1>
+  <svg class="seam" viewBox="0 0 760 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 H250 l10 -6 l12 12 l10 -7 H470 l9 5 l8 -9 l7 4 H760" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+
+  <p class="lede">AI agents are starting to take real actions — placing orders, moving money, shipping code. When a tool feeds one bad data, it doesn't crash. <em>It confidently does the wrong thing, with no error.</em> faultline catches that, on purpose.</p>
+
+  <p class="small">This is a short brief on what faultline is, what already works, the honest state of it, and where it goes next — written for someone I'd want to build it with.</p>
+
+  <hr>
+
+  <h2><span class="n">01</span>The problem</h2>
+  <p>Every test an agent passes assumes its tools behave. They don't. A search returns 3 of 47 results. An API hands back a stale price. A lookup returns a plausible-but-wrong number. The agent has no idea — it reasons over the broken data and acts:</p>
+
+  <div class="quote">Your agent doesn't crash.<br>It <span class="amber">lies.</span></div>
+
+  <p>It places the order on a wrong quantity. It refunds the wrong customer. It quotes last week's number as today's. <strong>No crash, no alert, every test green.</strong> Evals measure quality when everything works. Monitors watch the pipes. Security tools chase attackers. None of them break the tools on purpose to find the silent wrong answer — the one that actually costs money once an agent can act.</p>
+
+  <h2><span class="n">02</span>Why this wins</h2>
+  <p>Honest picture: the room is no longer empty. "Agent chaos engineering" is being called the next frontier (Towards Data Science, VentureBeat), and Azure Chaos Studio, Fastio, and the eval tools (DeepEval, Pydantic Evals) are all moving in. But they're all crowding the <em>easy</em> half — and that's the opening.</p>
+  <ul>
+    <li><strong>Injection is commoditizing; detection isn't.</strong> Anyone can break a tool. The unsolved part is reliably deciding the agent then did the wrong thing — <em>without</em> a flaky LLM judge. That's where the false positives and the trust live, and nobody has nailed it.</li>
+    <li><strong>We win on depth and a vertical, not the category name.</strong> Deterministic, fault-specific invariants (stale-data → did it flag staleness? wrong-number → did it act on an impossible value?), aimed at action-taking agents — coding, financial ops — where a silent-wrong has a price tag.</li>
+    <li><strong>The hard part is already built.</strong> This grew out of my last project's interception engine — wrapping and intercepting an agent's tool calls. That primitive recorded failures; faultline turns it offensive and <em>causes</em> them.</li>
+    <li><strong>Proof, not positioning.</strong> The category narrative is being written by others right now — we don't out-talk it, we out-prove it: be the one tool that catches the silent failure the eval/judge crowd structurally misses, demonstrated on a famous agent.</li>
+  </ul>
+
+  <h2><span class="n">03</span>What already exists</h2>
+  <p>The reason I'm writing this and not just describing an idea: the 80% that's usually vaporware in a pitch is built and running.</p>
+
+  <div class="card built">
+    <div class="lab"><span class="dot" style="background:var(--green)"></span>Working today</div>
+    <ul>
+      <li><strong>The engine</strong> (Python, open-source): arms a fault, runs the agent, and classifies every result <span class="mono">PASS</span> / <span class="mono">SILENT-WRONG</span> / <span class="mono">CRASH</span>. It runs offline right now and catches a real silent failure — an agent that buys an out-of-stock item with no error. Six faults: timeout, server-error, truncate, null-response, stale-data, wrong-number.</li>
+      <li><strong>CLI + GitHub Action.</strong> <span class="mono">pip install faultline</span> → <span class="mono">faultline run</span> fails the build the moment a tool fault makes the agent silently wrong.</li>
+      <li><strong>The hosted platform.</strong> A real signed-in dashboard — resilience score over time, a per-fault matrix for every run, regressions — on a full auth + database backend. Plus the marketing site.</li>
+      <li><strong>The loop is closed.</strong> <span class="mono">faultline run --push</span> sends CI results straight to the dashboard — metadata only, never your prompts or data. Tested end-to-end.</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">04</span>The honest state</h2>
+  <p>For a cofounder this matters more than the highlight reel:</p>
+  <div class="card honest">
+    <div class="lab"><span class="dot" style="background:var(--amber)"></span>Not done yet</div>
+    <ul>
+      <li><strong>No users, no revenue.</strong> It's built, not launched.</li>
+      <li><strong>The dashboard demo data is illustrative</strong> — real data flows the moment a project token runs in CI.</li>
+      <li><strong>The oracle is the real risk.</strong> Deciding "is the answer wrong?" currently leans on an LLM judge. That has to become deterministic (below). This is the #1 thing to de-risk.</li>
+      <li><strong>Billing, team invites, public deploy</strong> — stubbed or pending.</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">05</span>Where the real value is</h2>
+  <p>This becomes a company, not a clever tool, when these land:</p>
+  <ol>
+    <li><strong>Reposition: a CI regression gate, not a one-time audit.</strong> "Find your silent bugs" gets run once and uninstalled. The durable product is per-PR: <em>"Resilience 87 → 71 — a new silent failure was introduced in this diff,"</em> posted as a comment on the pull request. Same engine, completely different retention.</li>
+    <li><strong>Fix the oracle with deterministic invariants.</strong> Instead of "is the answer wrong?", check fault-specific behavior that needs no ground truth: stale-data → did it flag the staleness? wrong-number → did it act on an impossible value? truncate → did it treat a partial list as complete? That library of <span class="mono">fault → invariant</span> checks is real, defensible IP.</li>
+    <li><strong>Build the moat from data.</strong> The engine is copyable in a weekend. The asset is the <strong>Agent Resilience Index</strong>: anonymized benchmarks across frameworks and faults — <em>"your stale-data resilience is bottom-quartile for support agents."</em> Nobody else has that data.</li>
+    <li><strong>Distribution: a content engine, not "Show HN and pray."</strong> A weekly "we broke a famous agent" post, plus the MCP wedge — "does your agent survive a misbehaving MCP server?" Narrow the focus to action-taking agents (coding, financial ops) where a silent-wrong has a price tag.</li>
+  </ol>
+
+  <h2><span class="n">06</span>Why I want a cofounder</h2>
+  <p>The engine works and the platform is built — that was the part I could carry alone. What's next is the durable, two-person work: making the oracle rigorous enough that engineers trust it, turning runs into a data moat, and building the distribution that makes a category. That's a real company, and it's more than a solo job.</p>
+  <p class="sign">If the empty room and the silent-failure thesis land for you the way they did for me, I'd love to build this together. — Let's talk.</p>
+
+  <hr>
+
+  <h2><span class="n">07</span>How it's built <span class="small" style="font-weight:400">(for the curious)</span></h2>
+  <div class="tech">
+    <div class="row"><b>Engine</b><span>Python package — a <span class="mono">@tool</span> decorator that wraps an agent's tools, a runner that arms each fault and classifies the result, and a report layer that pushes to the dashboard.</span></div>
+    <div class="row"><b>Web stack</b><span>Vanilla HTML / CSS / JS with GSAP, three.js and Lenis — no build step. A light marketing site and a dark, multi-page product app.</span></div>
+    <div class="row"><b>Backend</b><span>Supabase — Postgres, Auth, and row-level security. One server-side <span class="mono">ingest_run</span> function is the only write CI can make, validated by a hashed project token.</span></div>
+    <div class="row"><b>Run it</b><span><span class="mono">cd site &amp;&amp; ./start.sh</span> → opens locally. Everything reads from your own Supabase once the SQL is applied.</span></div>
+    <div class="row"><b>Deploy</b><span>It's a static site — any free static host. The Python engine ships to PyPI + GitHub Marketplace.</span></div>
+  </div>
+
+  <footer>
+    faultline — chaos engineering for AI agents. Catch the silent failures before your users do.<br>
+    Full technical reference lives alongside this in <span class="mono">PLATFORM_GUIDE.md</span>.
+  </footer>
+
+</div>
+</body>
+</html>

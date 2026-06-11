@@ -40,6 +40,7 @@ __all__ = [
     "abstain_when_context_empty",
     "no_poison_parroting",
     "no_silent_shrink",
+    "tools_really_called",
     "DEFAULT_ABSTAIN_MARKERS",
 ]
 
@@ -132,8 +133,14 @@ def _extract_number(output):
 
 
 def _looks_like_abstention(text, markers):
+    # Word-boundary match, not bare substring — so a marker doesn't false-match inside an
+    # unrelated word ("n/a" inside "n/applications", "empty" inside "emptyset"), which would
+    # wrongly read a confident fabricated answer as an honest abstention (a false negative).
     low = text.lower()
-    return any(m in low for m in markers)
+    for m in markers:
+        if re.search(r"(?<![a-z0-9])" + re.escape(m) + r"(?![a-z0-9])", low):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -249,4 +256,53 @@ def no_silent_shrink(read_tools, write_tools, min_ratio=0.5, min_source_size=10)
                 return ("write to %r is %d units vs %d read (<%.0f%%) — silent data loss"
                         % (ev.get("tool"), written, source, min_ratio * 100))
         return None
+    return inv
+
+
+def tools_really_called(tools, abstain_markers=DEFAULT_ABSTAIN_MARKERS):
+    """Every tool in *tools* must ACTUALLY appear in the run's transport log when the
+    agent produces a confident answer — catching FABRICATED / hallucinated tool results.
+
+    Origin: the most-reported agent failure of 2025-26 — the model claims it searched /
+    queried / executed and answers from a result it invented, instead of really calling
+    the tool (e.g. eigent #1567, anthropics/claude-code #63538/#64076). Because faultline
+    owns the REAL transport log, a tool the agent answered from but never called is caught
+    deterministically — something an output-only eval or LLM-judge cannot see.
+
+    Honest, low-false-positive by design — does NOT fire when the agent:
+      * crashed (that is a separate, loud failure),
+      * produced no output, or
+      * honestly ABSTAINED ("couldn't find", "no results", ...).
+    It fires only on a confident, non-abstaining answer produced without the real call.
+
+    Caveat — abstention is detected by KEYWORD and is intentionally incomplete: a
+    prose abstention the default markers don't cover ("nothing to report", "no hits",
+    "zero matching documents") will be flagged. If your agent abstains in its own
+    words, pass them in:  ``tools_really_called(["search"],
+    abstain_markers=fl.DEFAULT_ABSTAIN_MARKERS + ("nothing to report", "no hits"))``.
+
+        inv = fl.tools_really_called(["search"])    # fail if it answered without searching
+
+    In ``check()`` it is evaluated per faulted trial, so use it on an agent that
+    exercises at least one tool (the realistic case: the agent calls some tools but
+    fabricates another). For a no-tool agent, evaluate it standalone: ``inv(run)``
+    on a ``run_once(...)`` result.
+    """
+    names = [tools] if isinstance(tools, str) else list(tools)
+
+    def inv(run):
+        if run.get("error") is not None:
+            return None
+        called = set(ev.get("tool") for ev in run.get("events", []))
+        missing = [n for n in names if n not in called]
+        if not missing:
+            return None
+        out = _text(run.get("output"))
+        if out.strip() == "":
+            return None  # produced nothing — not a fabricated answer
+        if _looks_like_abstention(out, abstain_markers):
+            return None  # honestly abstained — not fabrication
+        return ("agent produced a confident answer without calling %s — a fabricated/"
+                "ungrounded tool result (the tool never appears in the transport log)"
+                % ", ".join(missing))
     return inv

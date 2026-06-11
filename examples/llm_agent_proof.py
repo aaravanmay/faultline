@@ -26,6 +26,18 @@ silent-wrong detection on a non-deterministic LLM agent.
 
 Run (uses the project's .venv311 + the .env key; cheap: Haiku, a handful of calls):
     ./.venv311/bin/python examples/llm_agent_proof.py
+
+RECORDING THIS FOR SHOW HN (the #1 distribution asset):
+  - This IS the demo to record. temperature=0 keeps the baseline stable on camera.
+  - Run it once dry first to confirm the baseline cleanly orders 70 (LLM non-determinism is real;
+    if a run's baseline is off, just re-run — the script says so honestly).
+  - Record a terminal at ~16pt, dark theme, ~80 cols. The arc the viewer must SEE in ~30s:
+    (1) real Claude agent, real tools → on TRUE data it orders 70  ✓ "looks fine"
+    (2) we corrupt ONE tool return (inventory 180→900, a plausible cache bug)
+    (3) the agent acts on the bad number with NO error of its own  ← the silent failure
+    (4) your evals would pass that confident answer; faultline FLAGS it.  ← the whole point
+  - Keep the [tool-call]/[tool-ret] lines in frame — they prove the calls are REAL, not staged.
+  - asciinema (`asciinema rec`) gives a crisp, replayable capture you can embed in the README + post.
 """
 from __future__ import annotations
 
@@ -160,6 +172,7 @@ def llm_agent(task, _client_obj=None, _verbose=False):
         resp = client.messages.create(
             model=MODEL,
             max_tokens=1024,
+            temperature=0,          # minimize LLM non-determinism so the on-camera baseline is stable
             system=SYSTEM,
             tools=TOOLS_SCHEMA,
             messages=messages,
@@ -294,6 +307,8 @@ def main():
         print("RESULT: faultline CAUGHT a silent-wrong on a real, non-deterministic LLM agent.")
         print("        The agent acted on the corrupted inventory with no error of its own;")
         print("        faultline flagged it via:", silent[0]["detail"])
+        print("\n        The model was right. The data was wrong. The agent shipped it anyway —")
+        print("        and an output-only eval would have passed it. That gap is the whole point.")
     else:
         crashed = [r for r in res.rows if r["verdict"] == "CRASH"]
         passed = [r for r in res.rows if r["verdict"] == "PASS"]

@@ -168,6 +168,15 @@ def run_once(agent, task, fault=None) -> dict:
     with session(recorder, fault):
         try:
             output = agent(task)
+            if inspect.iscoroutine(output):
+                # An async agent returns an un-awaited coroutine — faultline can't see its real
+                # output. Fail LOUD with the workaround instead of silently "passing" on a coroutine
+                # (a silent failure is the exact thing this tool exists to catch).
+                output.close()
+                output = None
+                raise TypeError(
+                    "faultline received a coroutine — async agents aren't supported yet. Wrap it in "
+                    "a sync shim, e.g.  lambda task: asyncio.run(my_async_agent(task)).")
         except Exception as exc:  # noqa: BLE001
             error = exc
     return {"events": recorder.events, "output": output, "error": error}

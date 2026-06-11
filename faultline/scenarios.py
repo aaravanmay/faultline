@@ -50,8 +50,12 @@ class ScenariosResult(LoudResult):
             lines.append("%s  %-22s %s" % (mark, r["name"], r["detail"]))
         lines.append("-" * 66)
         v = self.violations()
-        if v:
-            lines.append("⚠ %d honest scenario(s) broke the rule — a real bug, not garbage-in." % len(v))
+        c = self.crashes()
+        if v or c:
+            if v:
+                lines.append("⚠ %d honest scenario(s) broke the rule — a real bug, not garbage-in." % len(v))
+            if c:
+                lines.append("✗ %d honest scenario(s) CRASHED — a real bug, not garbage-in." % len(c))
         else:
             lines.append("✓ agent held the rule on every honest scenario.")
         out = "\n".join(lines)
@@ -92,7 +96,9 @@ def scenarios(agent, cases, invariants, label="scenarios"):
         if run.get("error") is not None:
             status, detail = "CRASH", "raised %s" % run["error"]
         elif msgs:
-            status, detail = "UNSAFE", "; ".join(msgs)
+            # coerce each message to str — a user invariant may return a truthy non-string
+            # (e.g. a list); the harness must surface it, not crash on "; ".join.
+            status, detail = "UNSAFE", "; ".join(str(m) for m in msgs)
         else:
             status, detail = "OK", "handled correctly"
         rows.append({"name": name, "status": status, "detail": detail})

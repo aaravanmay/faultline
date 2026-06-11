@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faultline — findings</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0e14;color:#e6edf3;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;padding:40px 20px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:30px;margin:0 0 4px;letter-spacing:-.02em}
+  h1 .f{color:#ff7a6e}
+  .tag{color:#8b949e;font-size:15px;margin:0 0 28px}
+  .card{background:#11161f;border:1px solid #232a33;border-radius:14px;padding:20px 22px;margin-bottom:18px}
+  .card h2{font-size:17px;margin:0 0 2px}
+  .card .sub{color:#8b949e;font-size:13px;margin:0 0 14px}
+  .card code{background:#0b0e14;border:1px solid #232a33;border-radius:6px;padding:1px 6px;font-size:12.5px;color:#9fb4c9}
+  table{width:100%;border-collapse:collapse;margin:6px 0 10px;font-size:13.5px}
+  td{padding:7px 8px;border-top:1px solid #1c232c;vertical-align:top}
+  td.v{white-space:nowrap;font-weight:700;width:120px}
+  .silent{color:#ff7a6e}.pass{color:#3fb950}.crash{color:#d29922}
+  .trials{color:#6e7681;font-size:12px}
+  .note{color:#adbac7;font-size:13.5px;margin-top:8px}
+  .stat{display:inline-block;background:#0b0e14;border:1px solid #232a33;border-radius:8px;padding:6px 12px;margin:2px 8px 2px 0;font-size:13px}
+  .stat b{color:#fff}
+  .foot{color:#6e7681;font-size:12.5px;margin-top:22px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="f">faultline</span> — silent failures it caught</h1>
+  <p class="tag">It breaks an AI agent's tools on purpose and catches the moments the agent confidently does the wrong thing with no error. Real runs below.</p>
+
+  <div class="card">
+    <h2>① A real Claude (Haiku) agent ordered out-of-stock goods</h2>
+    <p class="sub">live LLM agent · <code>faultline.examples.live_agent</code> · cost: $0.0245</p>
+    <table>
+      <tr><td class="v silent">⚠ SILENT</td><td>wrong-number → agent ordered out-of-stock goods (stock was 2, looked like 10) <span class="trials">[SILENT,SILENT,SILENT]</span></td></tr>
+      <tr><td class="v silent">⚠ SILENT</td><td>null-response → agent barreled ahead on empty inventory <span class="trials">[SILENT,SILENT,SILENT]</span></td></tr>
+      <tr><td class="v crash">✗ CRASH</td><td>timeout → agent crashed when the tool hung <span class="trials">[CRASH,CRASH,CRASH]</span></td></tr>
+    </table>
+    <p class="note">Resilience 0/3 · no real order ever fired (REAL_ORDERS empty) · caught deterministically, no AI-judge.</p>
+  </div>
+
+  <div class="card">
+    <h2>② A real LangChain agent — same silent failure (the popular framework)</h2>
+    <p class="sub">standard create_tool_calling_agent + AgentExecutor · Claude Haiku · <code>faultline.examples.langchain_agent</code></p>
+    <table>
+      <tr><td class="v silent">⚠ SILENT</td><td>wrong-number → LangChain agent ordered out-of-stock goods <span class="trials">[SILENT,SILENT,SILENT]</span></td></tr>
+      <tr><td class="v pass">✓ PASS</td><td>null-response → handled gracefully <span class="trials">[PASS,PASS,PASS]</span></td></tr>
+      <tr><td class="v crash">✗ CRASH</td><td>timeout → crashed on a hung tool (no timeout handling) <span class="trials">[CRASH,CRASH,CRASH]</span></td></tr>
+    </table>
+    <p class="note">faultline <b>discriminates</b>: the empty-data case the naive agent failed, this one handled — so it tells a robust agent from a fragile one (not a dumb always-FAIL).</p>
+  </div>
+
+  <div class="card">
+    <h2>③ A browser agent bought a $500 item it thought cost $50</h2>
+    <p class="sub">browser-agent simulation · <code>faultline.examples.browser_demo</code></p>
+    <table>
+      <tr><td class="v silent">⚠ SILENT</td><td>wrong-number → bought a $500 item on a corrupted (stale) price <span class="trials">[SILENT,SILENT,SILENT]</span></td></tr>
+      <tr><td class="v pass">✓ PASS</td><td>null-response → handled (empty page)</td></tr>
+      <tr><td class="v crash">✗ CRASH</td><td>timeout → crashed (page hung)</td></tr>
+    </table>
+    <p class="note">No real click/purchase ever fired (REAL_CLICKS empty).</p>
+  </div>
+
+  <div>
+    <span class="stat"><b>10/10</b> engine tests pass</span>
+    <span class="stat"><b>0</b> real side effects</span>
+    <span class="stat"><b>no</b> LLM-judge needed</span>
+    <span class="stat"><b>~$0.02</b> per live run</span>
+  </div>
+
+  <p class="foot">Every result reproducible from the faultline repo. "SILENT" = confident wrong action, no error — the failure no other tool catches.</p>
+</div>
+</body>
+</html>

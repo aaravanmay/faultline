@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faultline — logo drafts</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0B0D14;--ink2:#3C4250;--muted:#6B7280;--blue:#2563EB;--bg:#F1F1F8;--line:#E4E1EE}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Inter",system-ui,sans-serif;line-height:1.6;
+    background-image:radial-gradient(60% 50% at 12% 6%,#D7DCF8,transparent 60%),radial-gradient(50% 44% at 90% 10%,#FBDFC9,transparent 56%),radial-gradient(56% 50% at 80% 90%,#E2D8F6,transparent 60%);background-attachment:fixed}
+  .wrap{max-width:1000px;margin:0 auto;padding:60px 28px 100px}
+  header h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:40px;letter-spacing:-.03em}
+  header p{color:var(--ink2);font-size:18px;max-width:60ch;margin-top:8px}
+  .concept{background:rgba(255,255,255,.6);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:20px;padding:30px;margin-top:30px;box-shadow:0 20px 60px rgba(13,18,45,.07)}
+  .concept .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .concept .num{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--blue);font-weight:500}
+  .concept h2{font-family:"Space Grotesk",sans-serif;font-size:24px;letter-spacing:-.02em}
+  .concept .why{color:var(--ink2);font-size:15.5px;max-width:70ch;margin-bottom:24px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .swatch{border-radius:14px;padding:34px;display:flex;align-items:center;justify-content:center;gap:18px;min-height:130px;position:relative;overflow:hidden}
+  .swatch.light{background:#FBFBFE;border:1px solid var(--line)}
+  .swatch.dark{background:#0B0A1A}
+  .swatch .tag{position:absolute;top:10px;left:12px;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.5}
+  .swatch.dark .tag{color:#fff}
+  .lockup{display:flex;align-items:center;gap:11px}
+  .word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:30px;letter-spacing:-.03em}
+  .word b{font-weight:700}
+  .small-row{display:flex;align-items:center;gap:26px;margin-top:18px;flex-wrap:wrap}
+  .fav{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .fav .chip{width:32px;height:32px;border-radius:8px;background:#0B0A1A;display:flex;align-items:center;justify-content:center}
+  .fav .chip.tiny{width:18px;height:18px;border-radius:5px}
+  .note{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted);margin-top:34px;text-align:center}
+  @media(max-width:640px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>faultline — logo drafts</h1>
+    <p>Three directions, all on the seismic/fault identity you already lean on. Each is shown on light + dark, as a full lockup, and at favicon size. Tell me which one (or which mix) and I'll refine + drop it into the site, app, and favicon.</p>
+  </header>
+
+  <!-- CONCEPT 1 — FAULT SLIP -->
+  <section class="concept">
+    <div class="head"><span class="num">01</span><h2>Fault Slip</h2></div>
+    <p class="why">The literal geology: two strata sheared apart along a fault plane (the blue diagonal). Minimal, instantly legible at any size, reads as "faultline" without a word. Closest to what you have — but cleaned into a single confident mark.</p>
+    <div class="row">
+      <div class="swatch light" style="color:#0B0D14;--a:#2563EB"><span class="tag">light</span>
+        <svg width="74" height="52" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="var(--a)" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="swatch dark" style="color:#FFFFFF;--a:#7DD3FC"><span class="tag">dark</span>
+        <svg width="74" height="52" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="var(--a)" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div class="small-row">
+      <div class="lockup" style="color:#0B0D14;--a:#2563EB">
+        <svg width="40" height="28" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="var(--a)" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+        <span class="word">fault<b style="color:#2563EB">line</b></span>
+      </div>
+      <div class="fav"><span class="chip"><svg width="20" height="14" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/><path d="M17 10L23 18" stroke="#7DD3FC" stroke-width="3.6" stroke-linecap="round"/><path d="M23 18H37" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/></svg></span><span class="chip tiny"><svg width="13" height="9" viewBox="0 0 40 28" fill="none"><path d="M3 10H17" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M17 10L23 18" stroke="#7DD3FC" stroke-width="4.5" stroke-linecap="round"/><path d="M23 18H37" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg></span> favicon</div>
+    </div>
+  </section>
+
+  <!-- CONCEPT 2 — FRACTURE -->
+  <section class="concept">
+    <div class="head"><span class="num">02</span><h2>Fracture</h2></div>
+    <p class="why">A solid gem sheared in two along a glowing seam — the same fracture as the "LIES." hero, distilled into a mark. The most ownable / brand-forward option; works beautifully as a filled app icon. Top facet ink, bottom facet blue, lit seam between.</p>
+    <div class="row">
+      <div class="swatch light" style="--ink:#0B0D14;--a:#2563EB"><span class="tag">light</span>
+        <svg width="58" height="58" viewBox="0 0 32 32" fill="none"><path d="M16 2.5 28 9.5V13.2H4V9.5Z" fill="#0B0D14"/><path d="M4 18.8H28V22.5L16 29.5 4 22.5Z" fill="#2563EB"/><rect x="3.5" y="13.6" width="25" height="4.6" rx="2.3" fill="#2563EB" opacity=".22"/></svg>
+      </div>
+      <div class="swatch dark" style="--ink:#fff;--a:#7DD3FC"><span class="tag">dark</span>
+        <svg width="58" height="58" viewBox="0 0 32 32" fill="none"><path d="M16 2.5 28 9.5V13.2H4V9.5Z" fill="#EAEEF6"/><path d="M4 18.8H28V22.5L16 29.5 4 22.5Z" fill="#3B82F6"/><rect x="3.5" y="13.6" width="25" height="4.6" rx="2.3" fill="#7DD3FC" opacity=".4"/></svg>
+      </div>
+    </div>
+    <div class="small-row">
+      <div class="lockup" style="color:#0B0D14">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><path d="M16 2.5 28 9.5V13.2H4V9.5Z" fill="#0B0D14"/><path d="M4 18.8H28V22.5L16 29.5 4 22.5Z" fill="#2563EB"/><rect x="3.5" y="13.6" width="25" height="4.6" rx="2.3" fill="#2563EB" opacity=".22"/></svg>
+        <span class="word">fault<b style="color:#2563EB">line</b></span>
+      </div>
+      <div class="fav"><span class="chip"><svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M16 2.5 28 9.5V13.2H4V9.5Z" fill="#fff"/><path d="M4 18.8H28V22.5L16 29.5 4 22.5Z" fill="#7DD3FC"/></svg></span><span class="chip tiny"><svg width="13" height="13" viewBox="0 0 32 32" fill="none"><path d="M16 2.5 28 9.5V13.2H4V9.5Z" fill="#fff"/><path d="M4 18.8H28V22.5L16 29.5 4 22.5Z" fill="#7DD3FC"/></svg></span> favicon</div>
+    </div>
+  </section>
+
+  <!-- CONCEPT 3 — SPIKE -->
+  <section class="concept">
+    <div class="head"><span class="num">03</span><h2>The Spike</h2></div>
+    <p class="why">A seismograph that runs flat, erupts once, and flatlines — the exact moment faultline catches the silent failure. The most "active/product" option; the rounded chip doubles as the app icon. Most distinct from your current mark.</p>
+    <div class="row">
+      <div class="swatch light"><span class="tag">light</span>
+        <svg width="58" height="58" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8.5" fill="#0B0D14" fill-opacity=".05" stroke="#0B0D14" stroke-opacity=".16" stroke-width="1.4"/><path d="M5.5 17H12L13.6 17 15.6 8 18.8 25 20.6 17H26.5" stroke="#2563EB" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="swatch dark"><span class="tag">dark</span>
+        <svg width="58" height="58" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8.5" fill="#fff" fill-opacity=".04" stroke="#fff" stroke-opacity=".18" stroke-width="1.4"/><path d="M5.5 17H12L13.6 17 15.6 8 18.8 25 20.6 17H26.5" stroke="#7DD3FC" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="small-row">
+      <div class="lockup" style="color:#0B0D14">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8.5" fill="#2563EB" fill-opacity=".08" stroke="#2563EB" stroke-opacity=".25" stroke-width="1.4"/><path d="M5.5 17H12L13.6 17 15.6 8 18.8 25 20.6 17H26.5" stroke="#2563EB" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="word">fault<b style="color:#2563EB">line</b></span>
+      </div>
+      <div class="fav"><span class="chip" style="background:#2563EB"><svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M5.5 17H12L13.6 17 15.6 8 18.8 25 20.6 17H26.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="chip tiny" style="background:#2563EB"><svg width="13" height="13" viewBox="0 0 32 32" fill="none"><path d="M5.5 17H12L13.6 17 15.6 8 18.8 25 20.6 17H26.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> favicon</div>
+    </div>
+  </section>
+
+  <p class="note">pick one → I refine it (exact weights, optical centering) + wire it into the site nav, the dashboard, and the favicon.</p>
+</div>
+</body>
+</html>

@@ -40,7 +40,7 @@ from __future__ import annotations
 from .trace import tool, wrap, run_once       # tool/wrap record events + inject faults
 from .runner import check, Result             # the harness + aggregated result
 from .faults import (
-    Fault, WrongNumber, StaleData, Truncate, NullResponse, Timeout, ServerError,
+    Fault, WrongNumber, StaleData, Truncate, NullResponse, EmptyResult, Timeout, ServerError,
 )
 from . import legacy                          # back-compat: faultline.legacy.chaos(...)
 from . import invariants                       # reusable invariants distilled from real bugs
@@ -49,31 +49,42 @@ from .fuzz import fuzz, FuzzResult
 from .replay import record, replay, ReplayResult, save_trace, load_trace
 from .mine import mine, MinedSpec
 from .scenarios import scenarios, ScenariosResult
+from .scan import scan, discover_tools, default_battery   # zero-oracle quickstart
 from .fix import propose_fix
 from .guard import guard, GuardBlocked, GuardRuleError   # runtime seatbelt (production counterpart to check)
 from .attest import (                                     # Rung 3: tamper-evident evidence report
     build_report, write_report, load_report, verify_report, compute_hash,
 )
-from .adapters import instrument, instrument_langchain, instrument_llamaindex
+from .adapters import (
+    instrument, instrument_langchain, instrument_langgraph, instrument_llamaindex,
+    instrument_pydantic_ai,
+)
 from .invariants import (
     numeric_answer_finite, abstain_when_context_empty,
-    no_poison_parroting, no_silent_shrink,
+    no_poison_parroting, no_silent_shrink, tools_really_called,
+    DEFAULT_ABSTAIN_MARKERS,
 )
+from .asserts import assert_resilient            # drop-in pytest/unittest assertion
+from .doctor import doctor                        # preflight diagnosis
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 __all__ = [
     "check", "run_once", "tool", "wrap", "Result",
-    "Fault", "WrongNumber", "StaleData", "Truncate", "NullResponse", "Timeout", "ServerError",
+    "instrument", "instrument_langchain", "instrument_langgraph", "instrument_llamaindex",
+    "instrument_pydantic_ai",
+    "Fault", "WrongNumber", "StaleData", "Truncate", "NullResponse", "EmptyResult",
+    "Timeout", "ServerError",
     "legacy", "invariants",
     "numeric_answer_finite", "abstain_when_context_empty",
-    "no_poison_parroting", "no_silent_shrink",
+    "no_poison_parroting", "no_silent_shrink", "tools_really_called",
+    "DEFAULT_ABSTAIN_MARKERS", "assert_resilient", "doctor",
     "probe", "mutations", "ProbeResult",
     "fuzz", "FuzzResult",
     "record", "replay", "ReplayResult", "save_trace", "load_trace",
     "mine", "MinedSpec",
     "scenarios", "ScenariosResult",
+    "scan", "discover_tools", "default_battery",
     "propose_fix",
     "guard", "GuardBlocked", "GuardRuleError",
     "build_report", "write_report", "load_report", "verify_report", "compute_hash",
-    "instrument", "instrument_langchain", "instrument_llamaindex",
 ]

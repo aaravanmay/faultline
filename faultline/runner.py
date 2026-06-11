@@ -38,12 +38,15 @@ def check(agent, task, faults, invariants=None, trials: int = 5, action_tools=No
         trial_statuses = []
         trial_details = []
 
+        notable_run = None                # a representative faulted run, kept for --explain
         for _ in range(trials):
             fault.reset()                 # clear any per-run fault state (e.g. StaleData) between trials
             faulted_run = run_once(agent, task, fault)
             status, detail = classify_trial(baseline, faulted_run, fault, invariants)
             trial_statuses.append(status)
             trial_details.append(detail)
+            if notable_run is None and status in ("SILENT", "CRASH"):
+                notable_run = faulted_run
 
         # Aggregate verdict.
         silent_count = trial_statuses.count("SILENT")
@@ -73,6 +76,7 @@ def check(agent, task, faults, invariants=None, trials: int = 5, action_tools=No
             "verdict": verdict,
             "detail": detail,
             "trials": trial_statuses,
+            "_sample_events": (notable_run or {}).get("events", []),   # for explain()
         })
 
     return Result(baseline, rows)
@@ -87,6 +91,35 @@ class Result(LoudResult):
     def __init__(self, baseline: dict, rows: list) -> None:
         self.baseline = baseline
         self.rows = rows
+
+    def explain(self, write: bool = True) -> str:
+        """Show YOUR WORK for each FAIL/CRASH: exactly what faultline corrupted and what the
+        agent then did — so a verdict is auditable, not a black box (defuses 'is this a real
+        false positive?'). Reads the recorded events; changes no verdict."""
+        lines = ["", "faultline · explain  (what faultline did to produce each FAIL/CRASH)", "=" * 64]
+        bad = [r for r in self.rows if r["verdict"] in ("FAIL", "CRASH")]
+        if not bad:
+            lines.append("no FAIL/CRASH rows to explain — the agent held up.")
+        for r in bad:
+            lines.append("-" * 64)
+            lines.append("%s  [%s]" % (r["fault"], r["verdict"]))
+            for ev in r.get("_sample_events", []):
+                if ev.get("faulted") and ev.get("pre_fault_result") is not None:
+                    lines.append("   corrupted  %-16s %r  ->  %r"
+                                 % (ev["tool"], ev["pre_fault_result"], ev["result"]))
+                elif ev.get("raised"):
+                    lines.append("   tool raised %-15s (fault made it throw)" % ev["tool"])
+                elif ev.get("is_action"):
+                    args = list(ev.get("args") or []) + [
+                        "%s=%r" % (k, v) for k, v in (ev.get("kwargs") or {}).items()]
+                    lines.append("   ACTION     %-16s called with %s" % (ev["tool"], tuple(args)))
+                else:
+                    lines.append("   called     %-16s -> %r" % (ev["tool"], ev.get("result")))
+            lines.append("   => %s" % r["detail"])
+        out = "\n".join(lines)
+        if write:
+            print(out)
+        return out
 
     @property
     def silent(self) -> list:

@@ -1,0 +1,29 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: install (engine is pure stdlib — no runtime deps)
+        run: pip install -e .
+      - name: install adapter-test deps (3.10+ only; the 3.9 leg skips those suites)
+        if: matrix.python-version != '3.9'
+        run: pip install langgraph langchain-core llama-index-core pydantic-ai-slim crewai
+      - name: full test suite
+        run: python tests/run_all.py
+      - name: CLI sanity — broken demo suite gates the build (exit 1)
+        run: .github/expect-exit.sh 1 faultline run faultline/examples/quickstart.py
+      - name: scan CLI sanity — zero-oracle scan also gates (exit 1)
+        run: |
+          .github/expect-exit.sh 1 faultline scan faultline/examples/your_agent.py:restock_agent --task '{"sku": "A-12"}'

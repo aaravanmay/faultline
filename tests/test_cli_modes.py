@@ -93,6 +93,11 @@ with tempfile.TemporaryDirectory() as d:
     check("run: silent failure -> exit 1", run_cli(["run", ok]) == 1)
     check("check alias matches run", run_cli(["check", ok]) == 1)
 
+    # per-subcommand --help dispatches and exits clean
+    check("scan --help exits 0", run_cli(["scan", "--help"]) == 0)
+    check("run --help exits 0", run_cli(["run", "--help"]) == 0)
+    check("doctor --help exits 0", run_cli(["doctor", "--help"]) == 0)
+
     for mode in ("probe", "fuzz", "scenarios", "replay"):
         check("%s: clean -> exit 0" % mode, run_cli([mode, ok]) == 0)
         check("%s: broken -> exit 1" % mode, run_cli([mode, bad]) == 1)

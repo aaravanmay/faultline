@@ -49,6 +49,13 @@ IMG_H = up16(PAD * 2 + CH * ROWS)
 
 def color_for(line):
     s = line.strip()
+    # tutorial vocabulary
+    if s.startswith("$"):
+        return CYAN                                  # shell command
+    if s.startswith("#"):
+        return DIM                                   # narration comment
+    if "Successfully installed" in s or "silent failure caught" in s:
+        return GREEN
     # 4-bugs demo vocabulary
     if "stars)" in s and "faultline" in s:
         return CYAN                                  # project header line

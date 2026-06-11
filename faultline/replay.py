@@ -71,15 +71,35 @@ class ReplayResult(LoudResult):
         return out
 
 
-def replay(agent, recorded, watch=None, invariants=None, label="replay"):
+def replay(agent, recorded, watch=None, invariants=None, transform=None, label="replay"):
     """Re-run *agent* on the recorded task and flag silent regressions vs the recording.
 
     watch       : ``output -> dict`` of the consequential fields to compare (e.g. the decision,
                   the amount, the chosen action). If any watched field changed, that's a regression.
                   If None, the whole output is compared.
     invariants  : optional extra checks ``inv(old_run, new_run) -> Optional[str]``.
+    transform   : optional ``task -> task'`` applied to the recorded task BEFORE re-running —
+                  model a context compression / memory rotation / prompt or model change, then
+                  diff the agent's behavior against the original recording. This is the
+                  "behavioral drift after context compression" detector (e.g. crewAI #5155):
+                  the agent responds differently to the *same* request after the transform, with
+                  no error — caught as a watched-field or action change. An identity transform is
+                  a guaranteed no-op (no phantom drift).
+
+                  MUST be a pure, deterministic function of the task (no time / RNG / set or dict
+                  ordering) — a non-deterministic transform makes the same run verify differently
+                  and would break tamper-evident attest/verify. And it models a real change to the
+                  agent's INPUT (compression, rotation, a new prompt); do not use it to feed the
+                  agent data the live agent never saw — that is the replay equivalent of
+                  oracle-seeding and produces a fake "regression".
     """
-    new = run_once(agent, recorded["task"])
+    task = recorded["task"]
+    if transform is not None:
+        import copy
+        # deep-copy the recorded task before handing it to transform, so a transform that mutates
+        # in place can't corrupt the recording (the source of truth) for later replays.
+        task = transform(copy.deepcopy(task))
+    new = run_once(agent, task)
     findings = []
 
     old_out, new_out = recorded["output"], new["output"]

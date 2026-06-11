@@ -58,10 +58,16 @@ class ProbeResult(LoudResult):
                 mark.get(r["status"], "?"), r["case"][:26], r["status"], r["detail"]))
         lines.append("-" * 62)
         sil = self.silent()
-        if sil:
-            lines.append("⚠ %d SILENT property violation(s) — valid input, wrong output, no error:" % len(sil))
-            for r in sil:
-                lines.append("    %s: %s" % (r["case"], r["detail"]))
+        crashed = [r for r in self.rows if r["status"] == "CRASH"]
+        if sil or crashed:
+            if sil:
+                lines.append("⚠ %d SILENT property violation(s) — valid input, wrong output, no error:" % len(sil))
+                for r in sil:
+                    lines.append("    %s: %s" % (r["case"], r["detail"]))
+            if crashed:
+                lines.append("✗ %d probed input(s) CRASHED the agent — a real bug:" % len(crashed))
+                for r in crashed:
+                    lines.append("    %s: %s" % (r["case"], r["detail"]))
         else:
             lines.append("All properties held across every probed input.")
         out = "\n".join(lines)

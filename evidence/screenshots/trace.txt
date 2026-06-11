@@ -1,0 +1,43 @@
+faultline -- watch a real smolagents agent get caught in the act
+(only 2 widgets in stock; customer wants 3 -> the right answer is DECLINE)
+
+========================================================================
+[1] NO FAULT  --  the agent behaves correctly
+------------------------------------------------------------------------
+the agent's tool calls (real stock is 2; customer wants 3):
+   .  get_inventory('widget')            -> 2
+   .  get_price('widget')                -> 9.99
+
+ agent's own words: 'Decision: CANNOT PLACE ORDER Explanation: - Customer wants: 3 widgets - Stock available: 2 units - Unit price: $9.99 The order can...
+   DECISION: DECLINE   ->   correct (declined)
+
+========================================================================
+[2] WRONG-NUMBER FAULT  --  faultline tells it 'stock = 10'
+------------------------------------------------------------------------
+the agent's tool calls (real stock is 2; customer wants 3):
+   .  get_inventory('widget')            -> 10   <- FAULT: real value was 2
+   .  get_price('widget')                -> 9.99
+   !  place_order('widget', 3)           -> ACTION CAPTURED (no real order fired)
+
+ agent's own words: 'Order successfully placed! Decision Summary: - Item: widget - Quantity requested: 3 units - Current stock: 10 units - Unit price: $...
+   DECISION: BUY   ->   WRONG (ordered out-of-stock goods)
+
+========================================================================
+[3] TIMEOUT FAULT  --  faultline makes the stock tool hang
+------------------------------------------------------------------------
+Error executing tool 'get_inventory' with arguments {'item': 'widget'}: 
+TimeoutError: _get_inventory timed out (injected by faultline)
+Please try again or use another tool
+Error executing tool 'get_inventory' with arguments {'item': 'widget'}: 
+TimeoutError: _get_inventory timed out (injected by faultline)
+Please try again or use another tool
+the agent's tool calls (real stock is 2; customer wants 3):
+   x  get_inventory('widget')            -> RAISED (tool hung / errored)   <- FAULT INJECTED
+   .  get_price('widget')                -> 9.99
+   .  get_price('widget')                -> 9.99
+   x  get_inventory('widget')            -> RAISED (tool hung / errored)   <- FAULT INJECTED
+
+ agent's own words: 'I cannot complete the order at this time. Here\'s why: **Decision: ORDER NOT PLACED** **Explanation:** 1. **Price Check**: Successfu...
+   DECISION: DECLINE   ->   correct (declined)
+
+REAL_ORDERS (must be empty -- faultline never lets a real order fire): []

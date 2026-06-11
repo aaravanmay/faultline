@@ -7,19 +7,22 @@ hit every tool the agent calls.
 """
 from __future__ import annotations
 
+from decimal import Decimal
+from typing import Any, Iterable, Optional
+
 
 class Fault:
     """Base class. Override `hit` to transform a tool's result or raise."""
     name = "fault"
 
-    def __init__(self, targets=None):
+    def __init__(self, targets: Optional[Iterable[str]] = None) -> None:
         # None = applies to every tool; otherwise only the named ones
         self._targets = set(targets) if targets else None
 
-    def applies_to(self, tool_name):
+    def applies_to(self, tool_name: str) -> bool:
         return self._targets is None or tool_name in self._targets
 
-    def hit(self, tool_name, args, kwargs, result):
+    def hit(self, tool_name: str, args: tuple, kwargs: dict, result: Any) -> Any:
         return result
 
     def reset(self):
@@ -35,13 +38,20 @@ class WrongNumber(Fault):
     it's really 2). The agent has no way to know — this is the silent killer."""
     name = "wrong-number"
 
-    def __init__(self, factor=5.0, targets=None):
+    def __init__(self, factor: float = 5.0, targets: Optional[Iterable[str]] = None) -> None:
         super().__init__(targets)
         self.factor = factor
 
     def _bend(self, v):
         # bend a number to a plausible-but-wrong value; never a no-op (0 * factor == 0 would be)
-        if isinstance(v, bool) or not isinstance(v, (int, float)):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, Decimal):
+            # Decimal is the standard money type — corrupt it in Decimal space (it can't
+            # multiply by a float). Common in financial agents, exactly our target.
+            wrong = v * Decimal(str(self.factor))
+            return wrong if wrong != v else Decimal(str(self.factor))
+        if not isinstance(v, (int, float)):
             return v
         wrong = v * self.factor
         if wrong == v:                 # 0 (and any other fixed point) → use a clearly-wrong value
@@ -58,7 +68,7 @@ class WrongNumber(Fault):
         # the common list-of-numbers / nested-dict return shapes).
         if isinstance(v, bool):
             return v
-        if isinstance(v, (int, float)):
+        if isinstance(v, (int, float, Decimal)):
             return self._bend(v)
         # pandas DataFrame/Series — detected by module name so pandas stays an
         # OPTIONAL dependency: zero imports, zero cost when pandas is absent.
@@ -145,6 +155,41 @@ class NullResponse(Fault):
         return None
 
 
+class EmptyResult(Fault):
+    """Return an EMPTY value of the SAME shape — "" / [] / {} / 0 — instead of
+    real data. Distinct from NullResponse (None): a well-formed but empty payload
+    (a no-match query, a zero-row result, a rate-limited fetch returning 200 with
+    nothing) that an agent is especially prone to treat as valid and answer from.
+
+    Origin: the "empty tool result but it answered anyway" class — e.g. a retriever
+    that returns ``[]`` on no match, or an inventory call that returns ``{}``."""
+    name = "empty-result"
+
+    def hit(self, tool_name, args, kwargs, result):
+        if isinstance(result, bool):
+            return result                       # a bool isn't a container to empty
+        if isinstance(result, str):
+            return ""
+        if isinstance(result, bytes):
+            return b""
+        if isinstance(result, list):
+            return []
+        if isinstance(result, tuple):
+            # a namedtuple has no valid "empty" of the same shape (its fields are required),
+            # so emptying it to a bare () would change the shape and crash attribute access —
+            # leave it unchanged (a coverage gap surfaced as "fault didn't change the value").
+            if hasattr(result, "_fields"):
+                return result
+            return ()
+        if isinstance(result, dict):
+            return {}
+        if isinstance(result, (set, frozenset)):
+            return type(result)()
+        if isinstance(result, (int, float, Decimal)):
+            return type(result)(0)
+        return result
+
+
 # ---- HARD failures: the tool blows up ----
 
 class Timeout(Fault):
@@ -159,7 +204,7 @@ class ServerError(Fault):
     """The tool returns an HTTP error."""
     name = "server-error"
 
-    def __init__(self, code=500, targets=None):
+    def __init__(self, code: int = 500, targets: Optional[Iterable[str]] = None) -> None:
         super().__init__(targets)
         self.code = code
 

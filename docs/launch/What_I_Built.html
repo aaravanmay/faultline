@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faultline — what I've been building</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,18..72,400;0,18..72,500;1,18..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15171E; --ink2:#3C414F; --muted:#6B7280; --faint:#9AA1AE;
+    --bg:#FAF8F4; --paper:#FFFFFF; --line:#E7E2D9;
+    --blue:#2563EB; --blue-soft:#EAF0FE;
+    --amber:#C9740A; --amber-soft:#FBF1E2;
+    --green:#1A7F4B; --green-soft:#E8F4ED;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;
+    font-size:20px;line-height:1.75;font-weight:400;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .doc{max-width:780px;margin:0 auto;padding:60px 28px 110px}
+  .mast{display:flex;align-items:center;gap:11px;font-family:"Inter",sans-serif;margin-bottom:50px}
+  .mast .logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:21px;letter-spacing:-.02em}
+  .mast .logo b{color:var(--blue);font-weight:700}
+  .mast .tag{margin-left:auto;font-size:13px;color:var(--muted);font-weight:500}
+  h1{font-family:"Inter",sans-serif;font-weight:800;font-size:52px;line-height:1.05;letter-spacing:-.035em;margin:0 0 8px}
+  .seam{display:block;width:100%;height:14px;margin:14px 0 22px;color:var(--blue)}
+  .kicker{font-family:"Inter",sans-serif;font-weight:600;font-size:13.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:20px}
+  .lede{font-size:24px;line-height:1.55;color:var(--ink2);margin:0 0 10px}
+  .lede em{font-style:italic;color:var(--ink)}
+  h2{font-family:"Inter",sans-serif;font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.025em;margin:60px 0 16px}
+  h2 .n{color:var(--faint);font-weight:600;font-size:20px;margin-right:12px;font-variant-numeric:tabular-nums}
+  h3{font-family:"Inter",sans-serif;font-weight:650;font-size:20px;margin:30px 0 4px}
+  p{margin:0 0 20px}
+  a{color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(37,99,235,.3)}
+  strong{font-weight:600;color:var(--ink)}
+  .mono{font-family:"JetBrains Mono",monospace;font-size:.82em;background:rgba(21,23,30,.05);padding:2px 7px;border-radius:6px;color:var(--ink2)}
+  .quote{font-family:"Inter",sans-serif;font-weight:800;font-size:36px;line-height:1.12;letter-spacing:-.03em;margin:38px 0;padding-left:24px;border-left:4px solid var(--amber)}
+  .quote .amber{color:var(--amber)}
+  ul{margin:0 0 22px;padding:0;list-style:none}
+  ul li{position:relative;padding-left:30px;margin-bottom:14px}
+  ul li::before{content:"";position:absolute;left:6px;top:14px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+  .card{border-radius:14px;padding:24px 26px;margin:28px 0;font-size:18.5px;line-height:1.65;font-family:"Inter",sans-serif;border:1px solid var(--line);background:var(--paper)}
+  .card .lab{font-weight:700;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card.win{background:var(--green-soft);border-color:#CBE6D6}
+  .card.win .lab{color:var(--green)}
+  .card.honest{background:var(--amber-soft);border-color:#EFD9B6}
+  .card.honest .lab{color:var(--amber)}
+  .card ul{margin:0}.card ul li{margin-bottom:9px;font-size:17.5px}.card ul li::before{top:12px}
+  .card p:last-child{margin-bottom:0}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  /* results table */
+  .res{font-family:"Inter",sans-serif;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:26px 0;background:var(--paper)}
+  .res .row{display:flex;gap:14px;padding:16px 20px;border-top:1px solid var(--line);font-size:16.5px;line-height:1.5}
+  .res .row:first-child{border-top:none}
+  .res .who{flex:0 0 150px;font-weight:600;color:var(--ink)}
+  .res .who small{display:block;color:var(--muted);font-weight:400;font-size:13px}
+  .res .what{flex:1;color:var(--ink2)}
+  .res .pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;margin-top:6px}
+  .res .pill.filed{background:var(--green-soft);color:var(--green)}
+  .res .pill.ready{background:rgba(245,158,11,.14);color:#b45309}
+  hr{border:none;border-top:1px solid var(--line);margin:50px 0}
+  .small{font-size:16px;color:var(--muted);font-family:"Inter",sans-serif;line-height:1.6}
+  .sign{font-size:21px;color:var(--ink2)}
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-family:"Inter",sans-serif;font-size:14px;color:var(--faint)}
+  @media (max-width:600px){
+    body{font-size:18.5px}.doc{padding:42px 20px 80px}
+    h1{font-size:38px}.lede{font-size:21px}.quote{font-size:27px}h2{font-size:25px}
+    .res .row{flex-direction:column;gap:4px}.res .who{flex:none}
+  }
+  @media print{body{background:#fff;font-size:12pt}.doc{max-width:none;padding:0}.card,.res{break-inside:avoid}a{border:none;color:var(--ink)}}
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <div class="mast">
+    <span class="logo">
+      <svg width="27" height="19" viewBox="0 0 40 28" fill="none" aria-hidden="true"><path d="M3 10H17" stroke="#15171E" stroke-width="3.2" stroke-linecap="round"/><path d="M17 10L23 18" stroke="#2563EB" stroke-width="3.2" stroke-linecap="round"/><path d="M23 18H37" stroke="#15171E" stroke-width="3.2" stroke-linecap="round"/></svg>
+      fault<b>line</b>
+    </span>
+    <span class="tag">What I've been building · 2026</span>
+  </div>
+
+  <div class="kicker">A note to Dad</div>
+  <h1>I built a tool that catches AI's lies — and used it to find real bugs in sixteen famous apps.</h1>
+  <svg class="seam" viewBox="0 0 780 14" preserveAspectRatio="none" aria-hidden="true"><path d="M0 7 H260 l10 -6 l12 12 l10 -7 H480 l9 5 l8 -9 l7 4 H780" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>
+
+  <p class="lede">Here's what I've actually been working on — in plain English, with real results you can click and verify yourself. <em>Not a school project — real software, tested against real apps that tens of thousands of developers use.</em></p>
+
+  <hr>
+
+  <h2><span class="n">01</span>The problem (simply)</h2>
+  <p>"AI agents" are programs that use AI to do a job on their own — a research assistant that searches the web and writes a report, or a coding assistant that edits your files for you. Companies are racing to put these everywhere.</p>
+  <p>Here's the scary part. When one of these agents is handed <strong>bad information</strong> — a stale price, half a file, an empty search — it usually <strong>doesn't crash and doesn't warn you.</strong> It just confidently does the wrong thing, and you'd never know:</p>
+
+  <div class="quote">The AI doesn't crash.<br>It <span class="amber">lies.</span></div>
+
+  <p>It places the order on a wrong number. It writes a confident report with made-up facts. It deletes half your file. <strong>No error, every test passes green.</strong> Almost nobody is testing for this — and as these agents start handling money, code, and real decisions, it's exactly the failure that will bite.</p>
+
+  <h2><span class="n">02</span>What I built</h2>
+  <p><strong>faultline</strong> deliberately breaks an AI agent's tools — feeds it wrong, stale, empty, or cut-off data on purpose — and catches the moment the agent silently does the wrong thing. Two pieces, both working today:</p>
+  <ul>
+    <li>An <strong>engine</strong> (open-source, in Python) that injects these failures and detects when the agent quietly went wrong — without needing to know the "right answer."</li>
+    <li>A <strong>web dashboard</strong> (a full sign-in app + database) that shows a team how resilient their agent is over time and flags when a change makes it worse.</li>
+  </ul>
+  <p>I designed and built all of it myself — the engine, the detection logic, the website, the dashboard, the database.</p>
+
+  <h2><span class="n">03</span>The real results — the part that matters</h2>
+  <p>Anyone can claim their tool works. So I used it — plus the "what does a silent failure look like" checklist it's built on — to hunt <strong>sixteen of the most popular open-source AI apps in the world</strong>. <strong>Every one had a hidden silent-failure flaw — 17 separate bugs in total (LlamaIndex had two).</strong> For each, I wrote the actual fix plus a test that fails before the fix and passes after. <strong>Two are already submitted as official pull requests on GitHub; the other fifteen are fully built and ready for me to submit.</strong> (To be precise: I found these by combining the tool with careful code review — and the tool now re-catches <strong>all 17</strong> on its own in a live run, 15 of them with no API key needed. I write the fix and tell the tool the rule to check; the tool does the catching.)</p>
+
+  <div class="res">
+    <div class="row">
+      <div class="who">Aider<small>45,000+ stars · AI coding assistant</small></div>
+      <div class="what">Fed half a file, it saved the file back <strong>missing the other half</strong> — silently deleting code. I submitted a fix + test.<br>
+        <a href="https://github.com/Aider-AI/aider/pull/5236">→ My pull request: github.com/Aider-AI/aider/pull/5236</a>
+        <div class="pill filed">● PR filed</div></div>
+    </div>
+    <div class="row">
+      <div class="who">GPT Researcher<small>27,000+ stars · AI research agent</small></div>
+      <div class="what">When its web searches returned <strong>nothing</strong>, it wrote a confident 13-page report with <strong>made-up citations</strong>. I submitted a fix + test.<br>
+        <a href="https://github.com/assafelovic/gpt-researcher/pull/1799">→ My pull request: github.com/assafelovic/gpt-researcher/pull/1799</a>
+        <div class="pill filed">● PR filed</div></div>
+    </div>
+    <div class="row">
+      <div class="who">GPT Pilot<small>34,000+ stars · AI app builder / coding agent</small></div>
+      <div class="what">When the AI's reply came back empty or cut off, it <strong>saved an empty file over your real code</strong> — wiping it with no warning. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">LlamaIndex<small>50,000+ stars · the most-used AI data framework</small></div>
+      <div class="what">Its summarizer <strong>answered questions from empty context</strong> — making up an answer when its search found nothing. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">LlamaIndex<small>50,000+ stars · a 2nd, separate bug</small></div>
+      <div class="what">When removing duplicate search results, it compared each result against the <strong>wrong item</strong> (an ordering mix-up) and <strong>silently deleted the wrong results</strong>. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">pandas-ai<small>24,000+ stars · chat-with-your-data tool</small></div>
+      <div class="what">Ask it to average data that turned out empty and it returned <strong>“not-a-number” as a real answer</strong>, no warning. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">STORM<small>28,000+ stars · Stanford’s AI article writer</small></div>
+      <div class="what">It wrote a <strong>“sourced” encyclopedia section with citations pointing to no sources</strong> when research came back empty. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">DB-GPT<small>19,000+ stars · AI database assistant</small></div>
+      <div class="what">On rows with missing values it <strong>labeled a chart with the wrong column entirely</strong> — silently wrong data (or a crash). Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Cover Agent<small>5,000+ stars · AI that writes tests (by Qodo)</small></div>
+      <div class="what">It accepted an <strong>out-of-date results file</strong> and, because of it, <strong>silently threw away a good test it had just written</strong> — the wrong call, no warning. (Its own code even <em>says</em> it’s supposed to error there.) Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Chonkie<small>4,000+ stars · splits documents for AI search</small></div>
+      <div class="what">One bad setting (a decimal where it expected a whole number) made it <strong>silently throw away the entire document</strong> — feeding the AI nothing, with no error. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">LLMWare<small>15,000+ stars · enterprise RAG toolkit</small></div>
+      <div class="what">A function that pulls surrounding context had a counting bug that made it <strong>repeat the same paragraph over and over</strong> (or get stuck in an endless loop) instead of reading the real surrounding text. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">LangChain<small>139,000+ stars · the most popular AI app framework</small></div>
+      <div class="what">Its markdown reader, given a document with an <strong>unclosed code block</strong> (common when AI output gets cut off), <strong>silently deleted everything after it</strong> — whole sections gone, no error. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Agno<small>41,000+ stars · popular AI agent framework</small></div>
+      <div class="what">When the AI repeated its answer (a common hiccup), Agno <strong>merged the copies and doubled every list</strong> — a list of 2 items became 4 — and returned it as a valid answer with no error. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Rerankers<small>by Answer.AI · ranks search results for AI</small></div>
+      <div class="what">If one search result was missing its ID tag, it <strong>silently kept the blank ID</strong> — which then made later "look up this result" calls quietly fail and return nothing. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Cognee<small>18,000+ stars · AI memory engine</small></div>
+      <div class="what">When splitting text into pieces, one over-long word made it <strong>silently produce an oversized piece</strong> instead of flagging it (which its own notes say it should) — feeding bad data into the AI's memory. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">OpenInference<small>by Arize · tracks AI cost &amp; usage</small></div>
+      <div class="what">It logged a <strong>token count into the "dollars spent" field</strong> by mistake — so a cost dashboard would show "$500" when the AI really just used 500 words. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+    <div class="row">
+      <div class="who">Magentic<small>2,000+ stars · structured AI outputs</small></div>
+      <div class="what">If the AI's list answer contained a quotation mark, the reader <strong>silently returned an empty list</strong> — dropping every item — instead of the real answer. Fix + test built and verified.
+        <div class="pill ready">● Fix ready to submit</div></div>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--muted);margin-top:10px">(LangChain’s SQL agent also reported a wrong total as fact in my tests — I kept that one as a demo rather than a fix, because the cleanest version of it is a how-you-use-it issue, not a bug in their code. I only submit fixes I’m confident are real bugs.)</p>
+
+  <div class="card win">
+    <div class="lab"><span class="dot" style="background:var(--green)"></span>Why this is a big deal</div>
+    <p>Each fix isn't "your AI was dumb" — it's a precise, missing safety check in their actual code, with a test that <strong>fails before my fix and passes after.</strong> That's a real, professional open-source contribution. If the maintainers accept them, it's undeniable proof — built by me, found by my tool — that I can point to forever. The whole experiment cost a few cents to run.</p>
+  </div>
+
+  <h2><span class="n">04</span>The honest picture</h2>
+  <p>I want to be straight with you about where it stands:</p>
+  <div class="card honest">
+    <div class="lab"><span class="dot" style="background:var(--amber)"></span>Early, but real</div>
+    <ul>
+      <li><strong>The tech works</strong> — the engine, the dashboard, and all seventeen fixes are genuinely built and verified (each with a test that fails before the fix and passes after), not mock-ups.</li>
+      <li><strong>No users or revenue yet</strong> — it's at the "prove it's real" stage, which is exactly what these seventeen real bugs and pull requests do.</li>
+      <li><strong>The market is moving fast</strong> — a few bigger players are circling this idea, so the next job is to keep being the one that actually <em>catches</em> the failures, and to get the first real users.</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">05</span>Where it goes next</h2>
+  <p>As these pull requests get merged, I write up the story ("a tool I built found and fixed silent bugs in sixteen of the biggest open-source AI apps") and use it to get the first teams trying faultline on their own agents. The durable version is a check that runs automatically every time a team changes their AI — catching these silent failures <em>before</em> they ship to real users.</p>
+  <p class="sign">That's the honest state of it: real, working, proven on real apps — and just getting started. I'm proud of it, and I wanted you to see the actual thing. — Aarav</p>
+
+  <hr>
+  <p class="small">Everything above is verifiable: the two pull requests are public on GitHub (links in section 3), and the full tool, dashboard, and the recorded "catches" all live in the project. Happy to walk you through any of it.</p>
+
+  <footer>faultline — finding the silent failures in AI agents before they reach real users.</footer>
+
+</div>
+</body>
+</html>

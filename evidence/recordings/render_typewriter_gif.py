@@ -15,6 +15,7 @@ FG = (222, 226, 230)
 DIM = (120, 130, 140)
 GREEN = (110, 220, 140)
 RED = (250, 130, 120)
+CYAN = (120, 200, 240)
 FONT_SIZE = 16
 PAD = 16
 ROWS = 22
@@ -37,6 +38,12 @@ IMG_H = PAD * 2 + CH * ROWS
 
 def color_for(line):
     s = line.strip()
+    if s.startswith("$"):
+        return CYAN
+    if s.startswith("#"):
+        return DIM
+    if "Successfully installed" in s or "silent failure caught" in s:
+        return GREEN
     if s.startswith("UNSAFE") or "broke the rule" in s or ("ordered" in s and "in stock" in s):
         return RED
     if s.startswith("✓") or "handled correctly" in s or "held the rule" in s or "passed every case" in s:

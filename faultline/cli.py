@@ -1,7 +1,12 @@
 """faultline command-line interface.
 
     faultline demo                 run the built-in offline demo (no API key)
+    faultline init                 scaffold a faultline_suite.py + CI workflow (never overwrites)
+    faultline doctor <file.py>:<fn> preflight: can faultline test this agent? (no faults injected)
+    faultline scan <file.py>:<fn>  zero-config: break your agent's tools, no suite file needed
+                                   (add --explain to see exactly what it corrupted + why each FAIL)
     faultline run <file.py>        chaos-test the suite in <file.py>  (alias: check)
+                                   (or a declarative `faultline run config.json`)
     faultline attest <file.py>     run + write a tamper-evident faultline.report.json
     faultline verify <report.json> re-derive the hash, confirm the report is untampered
     faultline probe <file.py>      run honest edge cases    -> needs faultline_probe()
@@ -184,6 +189,86 @@ def _load_fn(path, fn_name):
         return None
 
 
+def _load_attr(path, attr_name):
+    """Load *attr_name* from a file WITHOUT calling it (used by scan for the agent fn)."""
+    if not os.path.exists(path):
+        print("faultline: no such file: %s" % path, file=sys.stderr)
+        return None
+    spec = importlib.util.spec_from_file_location("_faultline_scan_mod", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(path)))
+    try:
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except Exception as exc:
+        print("faultline: error loading %s — %s: %s" % (path, type(exc).__name__, exc),
+              file=sys.stderr)
+        return None
+    fn = getattr(mod, attr_name, None)
+    if fn is None:
+        print("faultline: %s defines no %s" % (path, attr_name), file=sys.stderr)
+        return None
+    if not callable(fn):
+        print("faultline: %s in %s is not callable" % (attr_name, path), file=sys.stderr)
+        return None
+    return fn
+
+
+def _parse_task(raw):
+    """Parse a --task value: JSON if it parses, otherwise the bare string."""
+    if raw is None:
+        return None
+    try:
+        import json
+        return json.loads(raw)
+    except Exception:
+        return raw
+
+
+def _run_scan(target, task, trials=3, explain=False):
+    """Drive `faultline scan FILE.py:agent_fn`."""
+    if ":" not in target:
+        print("faultline: scan target must be FILE.py:agent_function "
+              "(e.g. agent.py:my_agent)", file=sys.stderr)
+        return 2
+    path, fn_name = target.rsplit(":", 1)
+    fn = _load_attr(path, fn_name)
+    if fn is None:
+        return 2
+    from .scan import scan as _scan
+    try:
+        result, tool_names = _scan(fn, task, trials=trials)
+    except Exception as exc:
+        print("faultline: scan failed — %s: %s" % (type(exc).__name__, exc), file=sys.stderr)
+        return 2
+    if not tool_names:
+        print("faultline: no faultline-wrapped tools fired in %s().\n"
+              "  Wrap your tool calls with @fl.tool or fl.wrap(fn) so faultline can inject\n"
+              "  faults, then re-run. (scan needs at least one wrapped tool to corrupt.)"
+              % fn_name, file=sys.stderr)
+        return 2
+    print("faultline scan -- %d wrapped tool(s): %s\n" % (len(tool_names), ", ".join(tool_names)))
+    result.report()
+    if explain:
+        result.explain()
+    # Honesty note: a fault that never reached a tool is a COVERAGE GAP, not resilience.
+    not_reached = [r for r in result.rows
+                   if r["verdict"] == "PASS" and "never reached" in (r.get("detail") or "")]
+    if not_reached:
+        print("\nnote: %d fault(s) never reached a tool (%s) — the agent doesn't call it, or there was"
+              "\n      nothing to corrupt. That's a coverage gap, not proof of resilience."
+              % (len(not_reached), ", ".join(r["fault"] for r in not_reached)))
+    # Gate on a SILENT/CRASH verdict OR any single SILENT trial (an intermittent silent failure
+    # aggregates to INCONCLUSIVE but is still a real bug — don't let it slip past CI).
+    bad = [r for r in result.rows
+           if r["verdict"] in ("FAIL", "CRASH") or "SILENT" in r.get("trials", [])]
+    _ci_emit("scan", len(bad), len(result.rows))
+    if bad:
+        print("\nfaultline: %d fault(s) not handled -> exit 1" % len(bad))
+        return 1
+    print("\nfaultline: all faults handled -> exit 0")
+    return 0
+
+
 def _ci_emit(mode, breaks, total_checked, extra=None):
     """Write CI-friendly artifacts when running inside GitHub Actions.
 
@@ -264,7 +349,54 @@ def _run_mode(mode, path):
     return 0
 
 
+def _run_doctor(target, task):
+    """Drive `faultline doctor FILE.py:agent_fn` — preflight diagnosis, exit 1 if NOT READY."""
+    if ":" not in target:
+        print("faultline: doctor target must be FILE.py:agent_function "
+              "(e.g. agent.py:my_agent)", file=sys.stderr)
+        return 2
+    path, fn_name = target.rsplit(":", 1)
+    fn = _load_attr(path, fn_name)
+    if fn is None:
+        return 2
+    from .doctor import doctor as _doctor
+    try:
+        rep = _doctor(fn, task)
+    except Exception as exc:
+        print("faultline: doctor failed — %s: %s" % (type(exc).__name__, exc), file=sys.stderr)
+        return 2
+    rep.report()
+    return 0 if rep.ready else 1
+
+
 MODE_COMMANDS = ("probe", "fuzz", "scenarios", "replay", "mine")
+
+# Per-subcommand help — `faultline <cmd> --help` prints just that command's usage.
+_SUBCOMMAND_HELP = {
+    "scan": "faultline scan FILE.py:agent [--task '{...}'] [--explain]\n"
+            "  Zero-config: discover the agent's wrapped tools, break them with the default fault\n"
+            "  battery, gate CI (exit 1 on a silent failure). --task passes JSON (or a bare string)\n"
+            "  to the agent; --explain shows exactly what was corrupted and why each FAIL.",
+    "doctor": "faultline doctor FILE.py:agent [--task '{...}']\n"
+              "  Preflight, no faults injected: reports whether faultline can test this agent — which\n"
+              "  wrapped tools fire, action tools, return-type coverage gaps, async. Exit 1 if NOT READY.",
+    "run": "faultline run FILE.py | config.json [--push]\n"
+           "  Run a suite: a Python file defining faultline_suite(), or a declarative faultline.json.\n"
+           "  Exit 1 on any silent failure or crash, so it gates CI. --push sends results to a dashboard.",
+    "init": "faultline init\n"
+            "  Scaffold faultline_suite.py + .github/workflows/faultline.yml in the current dir\n"
+            "  (idempotent — never overwrites existing files).",
+    "demo": "faultline demo\n  Run the built-in offline demo (a tiny broken agent, no API key).",
+    "attest": "faultline attest FILE.py [--out faultline.report.json]\n"
+              "  Run the suite AND write a tamper-evident report (run + an auditable evidence file).",
+    "verify": "faultline verify REPORT.json\n"
+              "  Re-derive the report's content hash and confirm it's untampered. Exit 1 if edited.",
+    "probe": "faultline probe FILE.py\n  Run faultline_probe() — assert a property over edge inputs.",
+    "fuzz": "faultline fuzz FILE.py\n  Run faultline_fuzz() — auto-generate edge inputs, find the breaker.",
+    "scenarios": "faultline scenarios FILE.py\n  Run faultline_scenarios() — honest hard situations, no faults.",
+    "replay": "faultline replay FILE.py\n  Run faultline_replay() — re-run a recorded trace, catch drift.",
+    "mine": "faultline mine FILE.py\n  Run faultline_mine() — learn invariants from good runs, then enforce.",
+}
 
 
 def main(argv=None):
@@ -278,6 +410,11 @@ def main(argv=None):
         print("faultline %s" % __version__)
         return 0
 
+    # `faultline <cmd> --help` -> just that subcommand's usage (not the whole wall of text).
+    if cmd in _SUBCOMMAND_HELP and any(a in ("-h", "--help") for a in argv[1:]):
+        print(_SUBCOMMAND_HELP[cmd])
+        return 0
+
     if cmd == "demo":
         from .examples.quickstart import faultline_suite
         print("faultline demo -- a tiny offline agent, no API key needed\n")
@@ -287,12 +424,68 @@ def main(argv=None):
         _push = "--push" in argv
         args = [a for a in argv[1:] if a != "--push"]
         if not args:
-            print("faultline: 'run' needs a file, e.g. faultline run suite.py", file=sys.stderr)
+            print("faultline: 'run' needs a file, e.g. faultline run suite.py "
+                  "(or a declarative faultline.json)", file=sys.stderr)
             return 2
-        suite = _load_suite(args[0])
-        if suite is None:
-            return 2
+        if args[0].endswith(".json"):
+            from .config import load_config_suite
+            try:
+                suite = load_config_suite(args[0])
+            except Exception as exc:  # noqa: BLE001
+                print("faultline: bad config %s — %s: %s" % (args[0], type(exc).__name__, exc),
+                      file=sys.stderr)
+                return 2
+        else:
+            suite = _load_suite(args[0])
+            if suite is None:
+                return 2
         return _run_suite(suite, _push=_push)
+
+    if cmd in ("scan", "doctor"):
+        args = argv[1:]
+        task = None
+        target = None
+        explain = False
+        i = 0
+        while i < len(args):
+            a = args[i]
+            if a == "--explain":
+                explain = True
+                i += 1
+                continue
+            if a in ("--task", "-t"):
+                if i + 1 >= len(args):
+                    print("faultline: --task needs a value", file=sys.stderr)
+                    return 2
+                task = _parse_task(args[i + 1])
+                i += 2
+                continue
+            if a.startswith("--task="):
+                task = _parse_task(a.split("=", 1)[1])
+                i += 1
+                continue
+            target = a
+            i += 1
+        if not target:
+            print("faultline: '%s' needs an agent, e.g. "
+                  "faultline %s agent.py:my_agent --task '{\"item\": \"widget\"}'"
+                  % (cmd, cmd), file=sys.stderr)
+            return 2
+        return _run_doctor(target, task) if cmd == "doctor" else _run_scan(target, task, explain=explain)
+
+    if cmd == "init":
+        from .scaffold import init as _init
+        created, skipped = _init(".")
+        for p in created:
+            print("  created  %s" % p)
+        for p in skipped:
+            print("  skipped  %s (already exists — left untouched)" % p)
+        if created:
+            print("\nNext: edit faultline_suite.py with your agent + wrapped tools, then run:")
+            print("  faultline run faultline_suite.py")
+        else:
+            print("\nNothing to create — the suite and workflow already exist.")
+        return 0
 
     if cmd == "attest":
         args = argv[1:]

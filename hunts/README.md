@@ -17,5 +17,6 @@ what happened — verbatim, including the ones where the library was fine.
 | 03 | GPT-Researcher (27k★) | CATCH · [PR #1799](https://github.com/assafelovic/gpt-researcher/pull/1799) (open) | fabricated a full report when every source came back empty |
 | 04 | Aider (45k★) | CATCH · [PR #5236](https://github.com/Aider-AI/aider/pull/5236) (open) | a truncated read rewrote a file missing its bottom half |
 | 05 | Haystack (22k★) | DEMONSTRATION | a RAG pipeline builds a "grounded" prompt from zero documents |
+| 06 | LlamaIndex (40k★) | DEMONSTRATION | corrupted scores → the similarity filter silently drops all context, answer produced anyway |
 
 Reproduce any of these: `pip install faultline <target>` then run the hunt script. Cost per hunt: a few cents.
