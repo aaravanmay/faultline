@@ -25,6 +25,15 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
   this happens; do not read it as an all-clear. Workaround today: materialize such returns
   (`list(stream())`) at the wrapped boundary, or assert an invariant. (Corrupting lazy/opaque returns
   in-place is a core-wrapper change deferred to an attended release.)
+- **Known false positives (adversarial-found, fix deferred).** Two cases where the no-oracle layers can
+  FLAG A CORRECT agent — use an invariant to disambiguate if you hit them: (a) a *safe-fallback constant*
+  that happens to differ from the baseline number by exactly the injected delta/factor is read as a
+  derived-value lockstep (e.g. an agent that rejects bad data and returns a fixed `eta=405` while baseline
+  was `5`, under a +400 corruption); (b) a *fail-safe escalation* — an agent that, on implausible data,
+  takes a new SAFE action (e.g. `alert_ops(...)`) instead of acting — is flagged as a divergent action,
+  because the detector can't tell a harmful action from a safe escalation. Fixing these without losing
+  recall is a detector change deferred to an attended block. (The thousands-separator FN they also found
+  *was* fixed — benchmark-gated, zero regression.)
 - **Wording:** "zero-config first look" / "catches with no rules written." NOT "catches every silent failure."
 
 ## fl.assert_resilient
@@ -75,6 +84,17 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
   same run verifies differently and breaks attest/verify. And it must model a real change to the agent's
   input — never feed the agent data the live agent never saw (that's replay oracle-seeding → a fake regression).
 - **Wording:** "catches behavioral drift after a context change you apply."
+
+## attest / verify (Rung 3 — tamper-evidence)
+- **Catches:** any edit to a report's **verdict content** (a flipped FAIL→PASS, a changed count, a mutated
+  finding) — the content hash breaks. Verified non-forgeable under adversarial attack (type coercion, list
+  reorder, key injection, whitespace mangling all caught), and a clean report survives a load→save→verify
+  round-trip without falsely reading tampered.
+- **Blind spot / wording:** the hash covers the **verdict body only** — NOT the `meta` (timestamp, git SHA,
+  CI URL, version) or the `attestation` provenance block. "Verified" means *these verdicts are exactly what
+  faultline produced and weren't edited* — NOT *this run happened at this time / commit / CI job*. Say
+  "attests the verdicts," never "attests the run's provenance." (And it's a content hash, not a crypto
+  signature — never say "cryptographically signed.")
 
 ## The wild-catches / PRs
 - **5 PRs open, 1 closed** (LangChain #37964, closed by a repo bot — never call it a win). The
