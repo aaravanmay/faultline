@@ -72,6 +72,14 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
 - **Wording:** "catches a tool result the agent answered from but never actually fetched." NOT "catches all
   fabrication / hallucination." Keep the "confident, non-abstaining" qualifier; never imply zero false-positives.
 
+## async agents / tools
+- **Scope:** faultline is **sync-only** today. An async *agent* (`async def agent`) now **fails loud** with
+  a clear error + the workaround (wrap it: `lambda task: asyncio.run(my_async_agent(task))`) — it no longer
+  silently returns an un-awaited coroutine. An async *tool* (a coroutine return) is uncorruptible (the fault
+  sees the coroutine, not the awaited value) — same coverage-gap class as the other uncorruptible returns.
+- **Wording:** "sync agents today; wrap async agents in `asyncio.run`." Native async support is a deferred
+  core-wrapper feature (see DEFERRED_FIXES.md). NOT "works with async agents out of the box."
+
 ## EmptyResult / the fault library
 - **Catches:** nothing alone — it's a fault that returns a well-formed-but-empty payload (`""`/`[]`/`{}`/`0`,
   distinct from `NullResponse`'s `None`), so you can test how an agent handles a 200-OK-but-empty tool result.
