@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use faultline in your work, please cite it."
+title: faultline
+abstract: >-
+  Deterministic silent-failure testing for AI agents: break a tool's return (wrong, stale, empty,
+  truncated data) and catch when the agent confidently does the wrong thing with no error — using a
+  deterministic detector, no LLM judge.
+type: software
+authors:
+  - family-names: Goenka
+    given-names: Aarav
+repository-code: "https://github.com/aaravanmay/faultline"
+url: "https://github.com/aaravanmay/faultline"
+license: MIT
+keywords:
+  - ai-agents
+  - testing
+  - reliability
+  - chaos-engineering
+  - llm
