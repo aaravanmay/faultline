@@ -17,6 +17,14 @@ adapter, or a new detector. They describe one frozen benchmark; everything else 
 - **Blind spot:** the zero-oracle layers catch the *harmful-action* direction. A corruption that makes the
   agent do **less / nothing** (e.g. an over-reading inventory → orders nothing) does not diverge an action,
   so scan can miss it — that case needs an invariant. Text-shape guarantees also need an invariant.
+- **Blind spot — uncorruptible return types (important).** The value-corruption faults
+  (`WrongNumber`/`StaleData`/`Truncate`/`EmptyResult`) reach **dict / list / tuple / str / number** (and
+  `WrongNumber` reaches pandas). A tool that returns a **generator / iterator (streaming), a coroutine, or
+  a custom object / dataclass / pydantic model** is passed through *uncorrupted* — so the fault shows as
+  "never reached" and the trial is a **coverage gap, not proof of resilience**. `scan` prints a note when
+  this happens; do not read it as an all-clear. Workaround today: materialize such returns
+  (`list(stream())`) at the wrapped boundary, or assert an invariant. (Corrupting lazy/opaque returns
+  in-place is a core-wrapper change deferred to an attended release.)
 - **Wording:** "zero-config first look" / "catches with no rules written." NOT "catches every silent failure."
 
 ## fl.assert_resilient
