@@ -66,6 +66,11 @@ place_order = fl.wrap(_place_order, is_action=True)
 
 def my_agent(task): ...                      # your real agent
 ```
+First, sanity-check your setup (no faults run — it just tells you if faultline can test your agent):
+```bash
+faultline doctor my_agent.py:my_agent --task '{"sku": "A-12"}'
+```
+Then break the tools:
 ```bash
 faultline scan my_agent.py:my_agent --task '{"sku": "A-12"}'
 ```
