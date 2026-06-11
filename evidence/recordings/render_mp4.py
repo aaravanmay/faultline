@@ -63,6 +63,13 @@ def color_for(line):
         return GREEN
     if s.startswith("-> PR") or s.startswith("PR #"):
         return YELLOW
+    # vs-eval demo vocabulary
+    if "WRONG" in s or ("SILENT" in s and "FAIL" in s) or s.startswith("⚠"):
+        return RED
+    if "PASS" in s or "GREEN" in s or "CAUGHT" in s:
+        return GREEN
+    if s.startswith("[A]") or s.startswith("[B]") or "SAME AGENT" in s:
+        return YELLOW
     # proof (scenarios) demo vocabulary
     if s.startswith("UNSAFE") or "broke the rule" in s or ("ordered" in s and "in stock" in s):
         return RED
@@ -99,6 +106,10 @@ while i < len(text):
         for _ in range(int(FPS * 0.9)): writer.append_data(f)      # beat after the bad order
     if "CAUGHT." in chunk:
         for _ in range(int(FPS * 1.0)): writer.append_data(f)      # beat on the verdict
+    if "shippable." in chunk:
+        for _ in range(int(FPS * 0.9)): writer.append_data(f)      # beat on the eval's false green
+    if "was raised" in chunk:
+        for _ in range(int(FPS * 0.9)): writer.append_data(f)      # beat on the fabricated answer
     if "PR #" in chunk or "-> PR" in chunk:
         for _ in range(int(FPS * 0.8)): writer.append_data(f)      # beat after each project's catch
 final = frame(text)

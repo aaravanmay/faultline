@@ -1,0 +1,30 @@
+faultline vs your eval · the SAME agent, tested two ways
+================================================================
+
+[A] YOUR EVAL — run the agent on clean data, grade the answer
+
+$ python eval.py
+  agent answer:  Per our docs: Our refund window is 30 days from purchase.
+  assert "mentions 30 days" ............................ PASS
+  => your eval is GREEN. Looks shippable.
+
+[B] FAULTLINE — break the retrieval tool the eval never touched
+
+$ faultline run faultline_suite.py
+  injected: retrieve() -> []     (rate-limited / no hits — happens daily)
+  agent answer:  Per our docs, the refund window is 14 days.
+                 confident, "sourced" — and WRONG. no error was raised
+
+faultline · check report
+==============================================================
+⚠  empty-result    FAIL    [SILENT, SILENT]
+   fabricated a confident answer from ZERO retrieved sources
+--------------------------------------------------------------
+Resilience: 0/1 faults handled
+1 SILENT failure — the dangerous kind. CAUGHT.
+
+SAME AGENT. Your eval passed it. faultline caught it.
+Evals grade answers on clean data. faultline breaks the data
+and watches what the agent does with it. Run both.
+
+$ pip install faultline
