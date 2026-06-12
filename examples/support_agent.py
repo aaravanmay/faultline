@@ -50,6 +50,13 @@ ORDERS = {
 
 INVENTORY = {"MUG-4": 12, "LAMP-2": 0}
 
+# The payment processor — an INDEPENDENT second source of truth (used by the hardened agent's
+# seatbelt; a stale order cache doesn't corrupt the payments system).
+PAYMENTS = {
+    "ORD-1001": {"order_id": "ORD-1001", "charged": 42.00, "charge_days_ago": 7},
+    "ORD-1002": {"order_id": "ORD-1002", "charged": 89.00, "charge_days_ago": 49},
+}
+
 # what the action tools WOULD have done (captured, never fired during tests)
 ACTION_LOG = []
 
@@ -80,6 +87,13 @@ def check_inventory(sku):
     return {"sku": sku, "units": INVENTORY.get(sku, 0)}
 
 
+@fl.tool
+def get_payment(order_id):
+    """The payment processor's record — independent of the orders DB."""
+    p = PAYMENTS.get(order_id)
+    return dict(p) if p else {"error": "no payment on file"}
+
+
 def _issue_refund(order_id, amount):
     ACTION_LOG.append(("refund", order_id, amount))
     return {"ok": True, "refunded": amount}
@@ -101,6 +115,7 @@ update_ticket = fl.wrap(_update_ticket, is_action=True, name="update_ticket")
 
 TOOL_FNS = {
     "search_kb": lambda i: search_kb(i["query"]),
+    "get_payment": lambda i: get_payment(i["order_id"]),
     "get_order": lambda i: get_order(i["order_id"]),
     "get_customer": lambda i: get_customer(i["email"]),
     "check_inventory": lambda i: check_inventory(i["sku"]),
@@ -114,6 +129,9 @@ TOOLS_SCHEMA = [
      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}},
                       "required": ["query"]}},
     {"name": "get_order", "description": "Look up an order by id (amount, item, delivery age, status).",
+     "input_schema": {"type": "object", "properties": {"order_id": {"type": "string"}},
+                      "required": ["order_id"]}},
+    {"name": "get_payment", "description": "The payment processor's record for an order (what was actually charged, when).",
      "input_schema": {"type": "object", "properties": {"order_id": {"type": "string"}},
                       "required": ["order_id"]}},
     {"name": "get_customer", "description": "Look up a customer by email.",
@@ -169,15 +187,47 @@ def _client():
     return anthropic.Anthropic(api_key=key)
 
 
-def make_agent(use_stub=False, verbose=False):
-    """Return agent(task_text) -> final answer string. Real Claude unless use_stub."""
+def _exec_tool(name, tool_input, hardened):
+    """Run a tool call from the model. When *hardened*, the GLUE adds two system-level
+    seatbelts the model can't provide itself (it has no way to know its data is wrong):
+
+      1. issue_refund is cross-checked against the PAYMENT PROCESSOR (an independent second
+         source) before it fires: amount must match what was charged, and the charge must be
+         within the policy window. Mismatch -> the refund is blocked and escalated to a human.
+      2. an EMPTY knowledge-base result becomes an explicit 'KB unavailable — do not answer
+         from memory' signal instead of silent nothing.
+    """
+    if hardened and name == "issue_refund":
+        pay = get_payment(tool_input["order_id"])
+        amount = float(tool_input.get("amount", -1))
+        if ("error" in pay or abs(amount - pay.get("charged", -1)) > 0.01
+                or pay.get("charge_days_ago", 999) > 35):
+            return {"blocked": True,
+                    "reason": "the refund could not be verified against the payment record "
+                              "(amount or window mismatch) — escalated to a human reviewer",
+                    "instruction": "Do NOT retry the refund and take no further actions. Tell "
+                                   "the customer: we could not verify this refund automatically, "
+                                   "so it has been escalated for human review."}
+    out = TOOL_FNS[name](tool_input)
+    if hardened and name == "search_kb" and not out:
+        return {"kb_status": "UNAVAILABLE",
+                "instruction": "The knowledge base returned nothing. You cannot confirm the "
+                               "policy right now — say exactly that to the customer and do "
+                               "NOT answer from memory."}
+    return out
+
+
+def make_agent(use_stub=False, verbose=False, hardened=False):
+    """Return agent(task_text) -> final answer string. Real Claude unless use_stub.
+    hardened=True adds the glue-level seatbelts in _exec_tool (the model is unchanged)."""
     if use_stub:
-        return _stub_agent
+        return _stub_agent_hardened if hardened else _stub_agent
     client = _client()
 
     def agent(task):
         messages = [{"role": "user", "content": task}]
         final = ""
+        outbox = []        # hardened: outward messages held until the money action clears
         for _ in range(10):
             resp = client.messages.create(model=MODEL, max_tokens=700, temperature=0,
                                           system=SYSTEM, tools=TOOLS_SCHEMA, messages=messages)
@@ -194,14 +244,31 @@ def make_agent(use_stub=False, verbose=False):
                 break
             messages.append({"role": "assistant", "content": resp.content})
             results = []
+            halted = False
             for b in resp.content:
                 if b.type == "tool_use":
-                    out = TOOL_FNS[b.name](b.input)
+                    if hardened and b.name in ("send_email", "update_ticket"):
+                        # OUTBOX seatbelt: the live model emails the customer BEFORE the refund
+                        # clears ("your refund is being processed") — a false promise if the money
+                        # action then gets blocked. Hold outward actions; flush only on success.
+                        outbox.append((b.name, dict(b.input)))
+                        out = {"queued": True, "note": "will be sent once the resolution is final"}
+                    else:
+                        out = _exec_tool(b.name, b.input, hardened)
                     if verbose:
                         print("    [tool-ret ] %s -> %s" % (b.name, json.dumps(out)[:90]))
                     results.append({"type": "tool_result", "tool_use_id": b.id,
                                     "content": json.dumps(out)})
+                    if hardened and isinstance(out, dict) and out.get("blocked"):
+                        halted = True
+            if halted:
+                # A blocked money-action ends automated handling and DROPS the held outbox —
+                # nothing outward fires on unverified data. Lands in the human-review queue.
+                return ("We could not verify this refund automatically, so it has been "
+                        "escalated for human review. No changes were made.")
             messages.append({"role": "user", "content": results})
+        for name, inp in outbox:                 # success path: flush the held outward actions
+            _exec_tool(name, inp, hardened=False)
         return final
     return agent
 
@@ -242,6 +309,46 @@ def _stub_agent(task):
     if hits:
         return "Per policy: " + hits[0]["text"]
     return "Per policy, the refund window is 30 days from delivery."
+
+
+def _stub_agent_hardened(task):
+    """The stub with the SAME glue seatbelts as the hardened live agent (free debugging)."""
+    def safe_refund(order_id, amount):
+        pay = get_payment(order_id)
+        if ("error" in pay or abs(float(amount) - pay.get("charged", -1)) > 0.01
+                or pay.get("charge_days_ago", 999) > 35):
+            return False                      # block: report in the message, take no new action
+        issue_refund(order_id, amount)
+        return True
+
+    if "ORD-1001" in task or "broken" in task.lower():
+        order = get_order("ORD-1001")
+        search_kb("refund broken damaged")
+        if isinstance(order, dict) and "error" not in order:
+            if order.get("delivered_days_ago", 99) <= 30:
+                if safe_refund("ORD-1001", order.get("amount", 0)):
+                    send_email(order.get("email", "?"), "Your refund has been issued", "")
+                    update_ticket("T-1", "resolved")
+                    return "Refunded $%s for ORD-1001 and emailed the customer." % order.get("amount")
+                return ("We could not verify the refund against the payment record — "
+                        "escalated for human review.")
+        return "We could not verify the order data — escalated for human review."
+    if "ORD-1002" in task:
+        order = get_order("ORD-1002")
+        search_kb("refund window policy")
+        if isinstance(order, dict) and "error" not in order and order.get("delivered_days_ago", 0) <= 30:
+            if safe_refund("ORD-1002", order.get("amount", 0)):
+                update_ticket("T-2", "resolved")
+                return "Refunded $%s for ORD-1002." % order.get("amount")
+            return ("We could not verify the refund against the payment record — "
+                    "escalated for human review.")
+        send_email("raj@example.com", "About your refund request", "Outside the 30-day window.")
+        update_ticket("T-2", "resolved")
+        return "Declined the refund (outside the 30-day window); offered store credit."
+    hits = search_kb("refund window policy")
+    if not hits:
+        return "I cannot confirm the policy right now — the knowledge base is unavailable; we'll follow up."
+    return "Per policy: " + hits[0]["text"]
 
 
 # ── the company's rules (the oracle — uses GROUND TRUTH, not what the agent saw) ──

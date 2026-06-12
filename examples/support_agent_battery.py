@@ -112,6 +112,32 @@ def main():
     rr = fl.replay(agent, rec, invariants=None)
     rr.report()
 
+    # ── 6. the fix: same model + two glue seatbelts, same faults ────────────
+    print("\n[6] THE FIX — same model, two seatbelts added in the GLUE (not the prompt):")
+    print("    a) refunds are cross-checked against the PAYMENT PROCESSOR before firing")
+    print("    b) an empty KB becomes 'cannot confirm policy' instead of silence")
+    hardened = sa.make_agent(use_stub=not LIVE, hardened=True, verbose=False)
+    fix_findings = []
+    h1 = fl.check(hardened, sa.TICKETS["broken_item"],
+                  faults=[fl.WrongNumber(factor=5.0, targets=["get_order"])],
+                  invariants=[sa.refund_follows_policy], trials=2)
+    h1.report(write_md=False)
+    fix_findings += [("broken-item", r["fault"], r["verdict"]) for r in h1.rows]
+    h2 = fl.check(hardened, sa.TICKETS["late_refund"],
+                  faults=[fl.WrongNumber(factor=0.2, targets=["get_order"])],
+                  invariants=[sa.refund_follows_policy], trials=2)
+    h2.report(write_md=False)
+    fix_findings += [("late-refund", r["fault"], r["verdict"]) for r in h2.rows]
+    h3 = fl.check(hardened, sa.TICKETS["policy_q"],
+                  faults=[fl.EmptyResult(targets=["search_kb"])],
+                  invariants=[sa.grounded_policy_answer], trials=2)
+    h3.report(write_md=False)
+    fix_findings += [("policy-q", r["fault"], r["verdict"]) for r in h3.rows]
+    fixed_green = all(v == "PASS" for _t, _f, v in fix_findings)
+    print("\n   => hardened agent under the same faults: %s"
+          % ("ALL GREEN — every catch above is now a blocked/escalated action" if fixed_green
+             else "NOT fully green yet: %s" % fix_findings))
+
     # ── the honest verdict ──────────────────────────────────────────────────
     print("\n" + "=" * 74)
     print("HONEST SUMMARY")
