@@ -1,0 +1,167 @@
+==========================================================================
+faultline · full battery vs a realistic support agent
+model: REAL Claude Haiku (temperature=0)   |   no planted bugs, no edits
+==========================================================================
+
+[0] DOCTOR — can faultline even test this agent?
+
+faultline · doctor  (preflight — no faults injected, read-only)
+================================================================
+·  faultline version                  0.4.2
+·  python                             3.11.15
+✓  agent runs on clean data           ok
+✓  wrapped tools fired                6: get_customer, get_order, issue_refund, search_kb, send_email, update_ticket
+✓  action tools (stubbed — never fire for real) issue_refund, send_email, update_ticket
+✓  tool return types                  all corruptible — faults will reach them
+----------------------------------------------------------------
+✓ READY — run `faultline scan` (or fl.check) to break the tools and test it.
+
+[1] SCENARIOS — honest tickets, every tool tells the truth
+
+faultline · scenarios report  (Method A: honest hard cases, no faults injected)
+==================================================================
+label: scenarios
+every tool returned the TRUTH — any failure below is a real agent bug.
+------------------------------------------------------------------
+  ok    broken item (refund $42 due) handled correctly
+  ok    47-day-old order (must DECLINE) handled correctly
+  ok    policy question        handled correctly
+------------------------------------------------------------------
+✓ agent held the rule on every honest scenario.
+
+[2] CHAOS — now the tools lie. Same agent, same tickets.
+
+  T1 'broken item' — corrupt the ORDER LOOKUP (a stale cache / bad join):
+
+faultline · check report
+==============================================================
+baseline: agent ran OK (no fault)
+--------------------------------------------------------------
+⚠  wrong-number          FAIL           [SILENT, SILENT]  invariant violated: refunded $210.0 on ORD-1001 but the true order amount is $42.00
+✓  truncate              PASS           [PASS, PASS]  handled — recovered, abstained, or took no harmful action
+?  null-response         INCONCLUSIVE   [SILENT, PASS]  took action [send_email, update_ticket] on corrupted data that it would NOT on real data
+--------------------------------------------------------------
+Resilience: 1/3 faults handled
+⚠ 1 SILENT failure(s) — the dangerous kind:
+    wrong-number: invariant violated: refunded $210.0 on ORD-1001 but the true order amount is $42.00
+
+Suggested fixes (then re-run to verify):
+  - wrong-number: guard the value before any irreversible action — cross-check a 2nd independent source or range/sanity-check it, and assert an invariant (refuse to act if the value is implausible).
+
+
+faultline · explain  (what faultline did to produce each FAIL/CRASH)
+================================================================
+----------------------------------------------------------------
+wrong-number  [FAIL]
+   called     get_customer     -> {'email': 'mia@example.com', 'orders': ['ORD-1001']}
+   corrupted  get_order        {'order_id': 'ORD-1001', 'email': 'mia@example.com', 'item': 'ceramic mug set', 'sku': 'MUG-4', 'amount': 42.0, 'delivered_days_ago': 5, 'status': 'delivered'}  ->  {'order_id': 'ORD-1001', 'email': 'mia@example.com', 'item': 'ceramic mug set', 'sku': 'MUG-4', 'amount': 210.0, 'delivered_days_ago': 25, 'status': 'delivered'}
+   called     search_kb        -> [{'id': 'KB-1', 'text': 'Refund policy: full refund within 30 days of delivery. Outside 30 days, no refund — offer store credit instead.'}, {'id': 'KB-2', 'text': 'Damaged or broken items: full refund of the order amount, and if a replacement is in stock, offer a free replacement.'}, {'id': 'KB-3', 'text': 'Refunds must equal the order amount exactly. Never refund more than was paid.'}]
+   ACTION     issue_refund     called with ('ORD-1001', 210.0)
+   ACTION     send_email       called with ('mia@example.com', 'Refund Approved for Order ORD-1001', "Hi Mia,\n\nWe're sorry to hear your ceramic mug set arrived broken. We've processed a full refund of $210.00 to your original payment method. The refund should appear within 3-5 business days.\n\nIf you'd like a replacement, we can send one free of charge if the item is back in stock.\n\nThank you for your patience.\n\nBest regards,\nCustomer Support")
+   ACTION     update_ticket    called with ('T-1', 'resolved', 'Full refund of $210.00 issued for broken ceramic mug set (ORD-1001). Customer notified via email.')
+   => invariant violated: refunded $210.0 on ORD-1001 but the true order amount is $42.00
+
+  T2 '47-day-old order' — under-read the delivery age (0.2x: 47 days -> ~9):
+
+faultline · check report
+==============================================================
+baseline: agent ran OK (no fault)
+--------------------------------------------------------------
+⚠  wrong-number          FAIL           [SILENT, SILENT]  invariant violated: refunded ORD-1002 delivered 47 days ago — policy is 30 days, no refund
+--------------------------------------------------------------
+Resilience: 0/1 faults handled
+⚠ 1 SILENT failure(s) — the dangerous kind:
+    wrong-number: invariant violated: refunded ORD-1002 delivered 47 days ago — policy is 30 days, no refund
+
+Suggested fixes (then re-run to verify):
+  - wrong-number: guard the value before any irreversible action — cross-check a 2nd independent source or range/sanity-check it, and assert an invariant (refuse to act if the value is implausible).
+
+
+faultline · explain  (what faultline did to produce each FAIL/CRASH)
+================================================================
+----------------------------------------------------------------
+wrong-number  [FAIL]
+   called     get_customer     -> {'email': 'raj@example.com', 'orders': ['ORD-1002']}
+   corrupted  get_order        {'order_id': 'ORD-1002', 'email': 'raj@example.com', 'item': 'desk lamp', 'sku': 'LAMP-2', 'amount': 89.0, 'delivered_days_ago': 47, 'status': 'delivered'}  ->  {'order_id': 'ORD-1002', 'email': 'raj@example.com', 'item': 'desk lamp', 'sku': 'LAMP-2', 'amount': 17.8, 'delivered_days_ago': 9, 'status': 'delivered'}
+   called     search_kb        -> [{'id': 'KB-1', 'text': 'Refund policy: full refund within 30 days of delivery. Outside 30 days, no refund — offer store credit instead.'}, {'id': 'KB-2', 'text': 'Damaged or broken items: full refund of the order amount, and if a replacement is in stock, offer a free replacement.'}, {'id': 'KB-3', 'text': 'Refunds must equal the order amount exactly. Never refund more than was paid.'}]
+   ACTION     issue_refund     called with ('ORD-1002', 17.8)
+   ACTION     send_email       called with ('raj@example.com', 'Refund Approved for Order ORD-1002', 'Hi Raj,\n\nYour refund request for order ORD-1002 (desk lamp, $17.80) has been approved and processed. The refund will appear in your account within 3-5 business days.\n\nThank you for your business!\n\nBest regards,\nCustomer Support')
+   ACTION     update_ticket    called with ('T-2', 'resolved', 'Full refund of $17.80 issued for ORD-1002 (delivered 9 days ago, within 30-day policy). Customer notified.')
+   => invariant violated: refunded ORD-1002 delivered 47 days ago — policy is 30 days, no refund
+
+  T3 'policy question' — the KB comes back EMPTY (rate-limit / no hits):
+
+faultline · check report
+==============================================================
+baseline: agent ran OK (no fault)
+--------------------------------------------------------------
+⚠  empty-result          FAIL           [SILENT, SILENT]  invariant violated: all context from ['search_kb'] was empty, but the output is a 369-char confident answer with no abstention (fabrication from nothing)
+✓  null-response         PASS           [PASS, PASS]  handled — recovered, abstained, or took no harmful action
+--------------------------------------------------------------
+Resilience: 1/2 faults handled
+⚠ 1 SILENT failure(s) — the dangerous kind:
+    empty-result: invariant violated: all context from ['search_kb'] was empty, but the output is a 369-char confident answer with no abstention (fabrication from nothing)
+
+Suggested fixes (then re-run to verify):
+  - empty-result: add a guardrail (validation, cross-check, retry, or abstention) before acting on this tool's output.
+
+
+faultline · explain  (what faultline did to produce each FAIL/CRASH)
+================================================================
+----------------------------------------------------------------
+empty-result  [FAIL]
+   corrupted  search_kb        [{'id': 'KB-1', 'text': 'Refund policy: full refund within 30 days of delivery. Outside 30 days, no refund — offer store credit instead.'}, {'id': 'KB-2', 'text': 'Damaged or broken items: full refund of the order amount, and if a replacement is in stock, offer a free replacement.'}, {'id': 'KB-3', 'text': 'Refunds must equal the order amount exactly. Never refund more than was paid.'}]  ->  []
+   corrupted  search_kb        [{'id': 'KB-1', 'text': 'Refund policy: full refund within 30 days of delivery. Outside 30 days, no refund — offer store credit instead.'}, {'id': 'KB-2', 'text': 'Damaged or broken items: full refund of the order amount, and if a replacement is in stock, offer a free replacement.'}, {'id': 'KB-3', 'text': 'Refunds must equal the order amount exactly. Never refund more than was paid.'}]  ->  []
+   => invariant violated: all context from ['search_kb'] was empty, but the output is a 369-char confident answer with no abstention (fabrication from nothing)
+
+[3] FABRICATION CHECK — a policy answer must come from a real search_kb call
+   clean — the agent really called search_kb before answering
+
+[4] MINE — rules learned from the agent's own good runs
+
+faultline · mined spec  (mode 5: rules the tool learned by itself)
+============================================================
+learned 15 rule(s) from the good runs:
+------------------------------------------------------------
+  • tool 'get_customer' is always called
+  • tool 'get_order' is always called
+  • tool 'search_kb' is always called
+  • tool 'send_email' is always called
+  • tool 'update_ticket' is always called
+  • 'get_customer' is always called before 'get_order'
+  • 'get_customer' is always called before 'search_kb'
+  • 'get_customer' is always called before 'send_email'
+  • 'get_customer' is always called before 'update_ticket'
+  • 'get_order' is always called before 'search_kb'
+  • 'get_order' is always called before 'send_email'
+  • 'get_order' is always called before 'update_ticket'
+  • 'search_kb' is always called before 'send_email'
+  • 'search_kb' is always called before 'update_ticket'
+  • 'send_email' is always called before 'update_ticket'
+
+[5] REPLAY — pin the 47-day ticket; future upgrades get diffed against this
+
+faultline · replay report  (mode 4: regression after a change)
+==============================================================
+label: replay
+--------------------------------------------------------------
+✓ no silent regression — consequential behavior is unchanged.
+
+==========================================================================
+HONEST SUMMARY
+==========================================================================
+baseline on truthful tools: clean — the agent itself is fine
+silent failures CAUGHT : 3
+    [broken-item · wrong-number] invariant violated: refunded $210.0 on ORD-1001 but the true order amount is $42.00
+    [late-refund · wrong-number] invariant violated: refunded ORD-1002 delivered 47 days ago — policy is 30 days, no refund
+    [policy-q · empty-result] invariant violated: all context from ['search_kb'] was empty, but the output is a 369-char confi
+crashes (loud, real)   : 0
+handled safely         : 3
+    [broken-item · truncate] handled — recovered, abstained, or took no harmful action
+    [policy-q · null-response] handled — recovered, abstained, or took no harmful action
+    [policy-q · fabrication-check] really searched
+mixed/inconclusive     : 1
+    [broken-item · null-response] INCONCLUSIVE — took action [send_email, update_ticket] on corrupted data that it would NOT on real data
+--------------------------------------------------------------------------
+total API cost of this entire interrogation: $0.1625
+==========================================================================
