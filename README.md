@@ -6,6 +6,8 @@ It does this **six ways**, all with the **same deterministic detector** — no L
 
 **Not just LLM agents.** If something takes external data and makes a decision — a pricing function, a trading signal, a parser, a config loader — faultline applies. Wherever wrong data could make your code quietly do the wrong thing, it finds it. (The cleanest wins so far have been on plain numeric finance code, no LLM involved.)
 
+**New here? → [How faultline works](HOW_IT_WORKS.md)** — the whole tool in plain English, traced to the code: the one core idea, all 7 faults, the 4-layer detector, the 6 modes, and the honest limits.
+
 ![CI](https://github.com/aaravanmay/faultline/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
